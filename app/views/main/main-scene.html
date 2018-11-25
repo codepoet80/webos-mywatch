@@ -1,0 +1,116 @@
+<div class="palm-scene">
+	<div class="palm-group">
+		<div class="palm-group-title">Relaunch app after changing</div>
+		<div class="palm-list">
+			<div class="palm-row single" x-mojo-touch-feedback="delayed">
+				<div class="palm-row-wrapper">
+					<div x-mojo-element="ListSelector" id="watchSelector"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="watchWrapper" style="height:6px; border-radius:3px; margin-left:7px; margin-right:7px;">
+	</div>
+
+	<div class="palm-group">
+		<div class="palm-group-title" x-mojo-loc="">Timeout on Pebble</div>
+		<div class="palm-list">
+			<div class="palm-row first" x-mojo-touch-feedback="delayed">
+				<div class="palm-row-wrapper">
+					<div x-mojo-element="ListSelector" id="timeoutSelector"></div>
+				</div>
+			</div>
+			<div class="palm-row last" x-mojo-touch-feedback="delayed">
+				<div class="palm-row-wrapper">
+					<div x-mojo-element="CheckBox" id="lostConnectionSignal"></div>
+					<div class="title truncating-text">Lost Connection Signal</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="palm-group">
+		<div class="palm-group-title" x-mojo-loc="">Settings</div>
+		<div class="palm-list">
+			<div class="palm-row first" x-mojo-touch-feedback="delayed">
+				<div class="palm-row-wrapper">
+					<div x-mojo-element="ListSelector" id="allSelector"></div>
+				</div>
+			</div>
+			<div class="palm-row" x-mojo-touch-feedback="delayed">
+				<div class="palm-row-wrapper">
+					<div x-mojo-element="ListSelector" id="phoneSelector"></div>
+				</div>
+			</div>
+			<div class="palm-row" x-mojo-touch-feedback="delayed">
+				<div class="palm-row-wrapper">
+					<div x-mojo-element="ListSelector" id="emailSelector"></div>
+				</div>
+			</div>
+			<div class="palm-row" x-mojo-touch-feedback="delayed">
+				<div class="palm-row-wrapper">
+					<div x-mojo-element="ListSelector" id="messageSelector"></div>
+				</div>
+			</div>
+			<div class="palm-row" x-mojo-touch-feedback="delayed">
+				<div class="palm-row-wrapper">
+					<div x-mojo-element="ListSelector" id="batterySelector"></div>
+				</div>
+			</div>
+			<div class="palm-row" x-mojo-touch-feedback="delayed">
+				<div class="palm-row-wrapper">
+					<div x-mojo-element="ListSelector" id="musicplayerSelector"></div>
+				</div>
+			</div>
+			<div class="palm-row" x-mojo-touch-feedback="delayed">
+				<div class="palm-row-wrapper">
+					<div x-mojo-element="ListSelector" id="musicremixSelector"></div>
+				</div>
+			</div>
+			<div class="palm-row" x-mojo-touch-feedback="delayed">
+				<div class="palm-row-wrapper">
+					<div x-mojo-element="ListSelector" id="macawSelector"></div>
+				</div>
+			</div>
+			<div class="palm-row last" x-mojo-touch-feedback="delayed">
+				<div class="palm-row-wrapper">
+					<div x-mojo-element="ListSelector" id="otherSelector"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="palm-group">
+		<div class="palm-group-title" x-mojo-loc="">Testing</div>
+		<div class="palm-list">
+			<div class="palm-row first" x-mojo-touch-feedback="delayed">
+				<div class="palm-row-wrapper">
+					<div x-mojo-element="Button" id="test-ring"></div>
+				</div>
+			</div>
+			<div class="palm-row" x-mojo-touch-feedback="delayed">
+				<div class="palm-row-wrapper">
+					<div x-mojo-element="Button" id="test-sms"></div>
+				</div>
+			</div>
+			<div class="palm-row" x-mojo-touch-feedback="delayed">
+				<div class="palm-row-wrapper">
+					<div x-mojo-element="Button" id="test-email"></div>
+				</div>
+			</div>
+			<div class="palm-row last" x-mojo-touch-feedback="delayed">
+				<div class="palm-row-wrapper">
+					<div x-mojo-element="Button" id="test-music"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="app-footer">
+		<hr/>
+		© 2015 <a href="http://www.metaviewsoft.de/">MetaViewSoft</a>
+	</div>
+	<div id="log-output">
+	</div>
+</div>

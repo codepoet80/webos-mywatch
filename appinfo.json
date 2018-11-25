@@ -1,0 +1,11 @@
+{
+	"id": "com.webos.mywatch",
+	"version": "0.9.23",
+	"vendor": "Jonathan Wise",
+	"type": "web",
+	"main": "index.html",
+	"title": "My Watch",
+	"noWindow": true,
+	"miniicon": "icon24.png",
+	"icon": "icon48.png"
+}

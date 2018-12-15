@@ -331,7 +331,7 @@ AppAssistant.prototype.getOpen = function() {
 };
 
 AppAssistant.prototype.subscribe = function() {
-	this.showInfo("subscribing for BT notifications");
+	this.showInfo("Subscribing to Bluetooth notifications");
 	var msg = {
 		method: "subscribenotifications",
 		parameters: {"subscribe": true},
@@ -514,7 +514,7 @@ AppAssistant.prototype.sppNotify = function(objData)
 			if (objData.error == 0) {
 				this.showInfo("Ready for connection.");
 			} else {
-				this.showInfo("Error, try to reenable bluetooth.");
+				this.showInfo("Error, try re-enabling Bluetooth.");
 			}
 			break;
 
@@ -1182,9 +1182,15 @@ AppAssistant.prototype.cleanup = function(event) {
 		onSuccess: function() {},
 		onFailure: function() {}
 	});
+
 };
 
+var closeWindowTimeout = false;
+var appWasRunning = false;
 AppAssistant.prototype.handleLaunch = function(launchParams) {
+	clearTimeout(closeWindowTimeout);
+	closeWindowTimeout = false;
+
 	gblLaunchParams = launchParams;
 
 	var cookie = new Mojo.Model.Cookie("TIMEOUT");
@@ -1221,48 +1227,19 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 	valueBattery = cookie.get();
 	if (!(valueBattery >= 0 && valueBattery <= 2)) {valueBattery = 0;}
 
-	/*
-	if (!this.openspp && (watchType == "Pebble")) {
-		this.logInfo("connect1");
-		this.connect();
-	}
-	*/
-
 	this.logInfo('Params: ' + Object.toJSON(launchParams));
 	try {
 		var dashboardFound = false;
 		if (launchParams && (typeof(launchParams) == 'object')) {
-			/*
-			if (1 || this.openspp) {
-				if (launchParams.command == "SMS") {
-					this.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, launchParams.appid, true);
-				} else if (launchParams.command == "RING") {
-					this.sendRing(launchParams.caller, launchParams.number);
-				} else if (launchParams.command == "INFO") {
-					this.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, launchParams.appid, false);
-				} else if (launchParams.command == "HANGUP") {
-					this.hangup();
-				} else if (launchParams.command == "PING") {
-					this.sendPing();
-				}
-			}
-			*/
 			var dashboardStage = this.appController.getStageController(DashboardName);
 			if (dashboardStage) {
-				this.logInfo('handleDashboardLaunch 1');
+				appWasRunning = true;
+				this.logInfo('App Dashboard launch, dashboard already exists.');
 				dashboardStage.delegateToSceneAssistant("displayDashboard", launchParams.dashInfo);
 				dashboardFound = true;
-				//return;
 			} else {
-				this.logInfo('handleDashboardLaunch 2');
-				/*
-				var pushDashboard = function(stageController) {
-					stageController.pushScene(DashboardName, launchParams.dashInfo);
-				};
-				this.appController.createStageWithCallback({name: DashboardName, lightweight: true}, pushDashboard, 'dashboard');
-				*/
+				this.logInfo('App Dashboard launch, dashboard could not be found');
 			};
-			//return;
 		}
 		if (!dashboardFound)
 		{
@@ -1270,7 +1247,8 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 			var stageProxy = this.controller.getStageProxy(MainStageName);
 			var stageController = this.controller.getStageController(MainStageName);
 			if (stageProxy) {
-				this.logInfo('handleMainLaunch 1');
+				this.logInfo('App launching existing main scene.');
+				appWasRunning = true;
 				gblRelaunched = true;
 				// If the stage exists, just bring it to the front by focusing its window.
 				// Or, if it is just the proxy, then it is being focused, so exit.
@@ -1281,7 +1259,7 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 					stageProxy.delegateToSceneAssistant("handleLaunchParams");
 				}
 			} else {
-				this.logInfo('handleMainLaunch 2');
+				this.logInfo('App launching with new main scene.');
 				gblRelaunched = false;
 				// Create a callback function to set up the new main stage
 				// after it is done loading. It is passed the new stage controller
@@ -1309,6 +1287,10 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 					this.sendPing();
 				}
 			}
+			//If we weren't already running, and this is a notification launch, we should close ourselves
+			//	So as not to annoy the user
+			if (!appWasRunning)
+				closeWindowTimeout = setTimeout("closeAfterNotification()", 2500);
 		}
 
 		var now = (new Date()).getTime();
@@ -1347,6 +1329,15 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 		Mojo.Log.error(e);
 	}
 };
+
+closeAfterNotification = function()
+{
+	closeWindowTimeout = false;
+	clearTimeout(closeWindowTimeout);
+	Mojo.Log.error("Closing after notification");
+	Mojo.Controller.getAppController().closeAllStages()
+}
+
 
 String.prototype.hashCode = function(){
 	var hash = 0;

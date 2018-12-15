@@ -17,7 +17,7 @@ MainAssistant.prototype.setup = function() {
 		Mojo.Controller.getAppController().createStageWithCallback({name: "dashboard", lightweight: true}, pushDashboard, 'dashboard');
 	}
 
-	this.controller.setupWidget("test-ring", {}, {label: "Test Ring"});
+	this.controller.setupWidget("test-ring", {}, {label: "Test Call"});
 	Mojo.Event.listen(this.controller.get('test-ring'), Mojo.Event.tap, this.testRing.bind(this));
 	this.controller.setupWidget("test-sms", {}, {label: "Test Message"});
 	Mojo.Event.listen(this.controller.get('test-sms'), Mojo.Event.tap, this.testSms.bind(this));
@@ -50,7 +50,7 @@ MainAssistant.prototype.setup = function() {
 	Mojo.Event.listen(this.controller.get("allSelector"), Mojo.Event.propertyChange, this.handleAllUpdate);
 	this.controller.setupWidget("phoneSelector", {label: "Phone", labelPlacement: Mojo.Widget.labelPlacementLeft, choices: choices}, {value: valuePhone});
 	Mojo.Event.listen(this.controller.get("phoneSelector"), Mojo.Event.propertyChange, this.handlePhoneUpdate);
-	this.controller.setupWidget("emailSelector", {label: "EMail", labelPlacement: Mojo.Widget.labelPlacementLeft, choices: choices}, {value: valueEmail});
+	this.controller.setupWidget("emailSelector", {label: "Email", labelPlacement: Mojo.Widget.labelPlacementLeft, choices: choices}, {value: valueEmail});
 	Mojo.Event.listen(this.controller.get("emailSelector"), Mojo.Event.propertyChange, this.handleEmailUpdate);
 	this.controller.setupWidget("messageSelector", {label: "Message", labelPlacement: Mojo.Widget.labelPlacementLeft, choices: choices}, {value: valueMessage});
 	Mojo.Event.listen(this.controller.get("messageSelector"), Mojo.Event.propertyChange, this.handleMessageUpdate);
@@ -64,6 +64,30 @@ MainAssistant.prototype.setup = function() {
 	Mojo.Event.listen(this.controller.get("macawSelector"), Mojo.Event.propertyChange, this.handleMacawUpdate);
 	this.controller.setupWidget("otherSelector", {label: "Others", labelPlacement: Mojo.Widget.labelPlacementLeft, choices: choices}, {value: valueOther});
 	Mojo.Event.listen(this.controller.get("otherSelector"), Mojo.Event.propertyChange, this.handleOtherUpdate);
+	//Testing drawer
+	this.hideTesting = this.hideTesting.bind(this);
+	this.controller.setupWidget("drawerTesting",
+		this.attributes = {
+			modelProperty: 'open',
+			unstyled: false
+		},
+		this.model = {
+			open: true
+		}
+	);
+	Mojo.Event.listen(this.controller.get("testingTwisty"), Mojo.Event.tap, this.hideTesting);
+	//Logging drawer
+	this.showLogging = this.showLogging.bind(this);
+	this.controller.setupWidget("drawerLogging",
+		this.attributes = {
+			modelProperty: 'open',
+			unstyled: false
+		},
+		this.model = {
+			open: false
+		}
+	);
+	Mojo.Event.listen(this.controller.get("logTwisty"), Mojo.Event.tap, this.showLogging);
 
 	menuattr = {omitDefaultItems: true};
 	menumodel = {visible: true,
@@ -74,12 +98,40 @@ MainAssistant.prototype.setup = function() {
 		]
 	};
 	this.controller.setupWidget(Mojo.Menu.appMenu, menuattr, menumodel);
-	
-	//this.keepDeviceOn();
-//	if (typeof(gblLaunchParams) == 'object') {
-//		this.controller.window.close();
-//	}
+
 };
+
+testDrawerOpen = true;
+MainAssistant.prototype.hideTesting = function() {
+	Mojo.Log.error("should show testing drawer now!");
+	this.controller.get("drawerTesting").mojo.toggleState();
+	if (!testDrawerOpen)
+	{
+		this.controller.get("testingTwistyImg").src = "images/arrow-down.png";
+		testDrawerOpen = true;
+	}
+	else
+	{
+		this.controller.get("testingTwistyImg").src = "images/arrow-right.png";
+		testDrawerOpen = false;
+	}
+}
+
+logDrawerOpen = false;
+MainAssistant.prototype.showLogging = function() {
+	Mojo.Log.error("should show log drawer now!");
+	this.controller.get("drawerLogging").mojo.toggleState();
+	if (!logDrawerOpen)
+	{
+		this.controller.get("logTwistyImg").src = "images/arrow-down.png";
+		logDrawerOpen = true;
+	}
+	else
+	{
+		this.controller.get("logTwistyImg").src = "images/arrow-right.png";
+		logDrawerOpen = false;
+	}
+}
 
 MainAssistant.prototype.handleWatchUpdate = function(event) {
 	var cookie = new Mojo.Model.Cookie("WATCH");
@@ -195,7 +247,7 @@ MainAssistant.prototype.testRing = function() {
 		method: "open",
 		parameters: {
 			id: "de.metaviewsoft.mwatch",
-			params: {command: "RING", caller: "Hallo", number: "+4947110815", test: true}
+			params: {command: "RING", caller: "Hello", number: "+1-605-475-6968", test: true}
 		},
 		onSuccess: function() {},
 		onFailure: function() {}
@@ -208,7 +260,7 @@ MainAssistant.prototype.testSms = function() {
 		method: "open",
 		parameters: {
 			id: "de.metaviewsoft.mwatch",
-			params: {command: "SMS", info: "Elvis was here!\nFrank has just left the building.", appid: "com.palm.app.messaging", test: true}
+			params: {command: "SMS", info: "I've seen things you people wouldn't believe. Attack ships on fire off the shoulder of Orion.", appid: "com.palm.app.messaging", test: true}
 		},
 		onSuccess: function() {},
 		onFailure: function() {}
@@ -220,7 +272,7 @@ MainAssistant.prototype.testEmail = function() {
 		method: "open",
 		parameters: {
 			id: "de.metaviewsoft.mwatch",
-			params: {command: "INFO", info: "Elvis was here! Frank has just left the building.", wordwrap: true, appid: "com.palm.app.email", test: true}
+			params: {command: "INFO", info: "I watched C-beams glitter in the dark near the Tannhauser Gate...", wordwrap: true, appid: "com.palm.app.email", test: true}
 		},
 		onSuccess: function() {},
 		onFailure: function() {}
@@ -276,7 +328,7 @@ MainAssistant.prototype.handleCommand = function(event) {
 };
 
 MainAssistant.prototype.logInfo = function(logText, open) {
-	//Mojo.Log.error("logInfo", logText);
+	Mojo.Log.info("logInfo:", logText);
 	this.controller.get('log-output').innerHTML = "<strong>" + (this.logOutputNum++) + "</strong>: " + logText + "<br />" + this.controller.get('log-output').innerHTML.substr(0, 1000) + "<br /><br />";
 	if (open) {
 		this.controller.get('watchWrapper').style.backgroundColor = "green";
@@ -286,9 +338,11 @@ MainAssistant.prototype.logInfo = function(logText, open) {
 };
 
 MainAssistant.prototype.activate = function(event) {
+
 };
 
 MainAssistant.prototype.cleanup = function(event) {
+	Mojo.Controller.getAppController().closeAllStages()
 	/*
 	this.controller.serviceRequest("palm://com.palm.power/com/palm/power", {
 		method: "activityEnd",

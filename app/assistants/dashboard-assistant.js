@@ -11,14 +11,6 @@ DashboardAssistant.prototype.setup = function() {
 	var info = cookie.get();
 	var cookie = new Mojo.Model.Cookie("LastMsg");
 	var msg = cookie.get();
-	/*
-	if (info != undefined) {
-		this.controller.get("song-name").innerHTML = info;
-	}
-	if (msg != undefined) {
-		this.controller.get("artist-name").innerHTML = msg;
-	}
-	*/
 };
 
 DashboardAssistant.prototype.pingWatch = function() {
@@ -43,10 +35,13 @@ DashboardAssistant.prototype.relaunchApp = function() {
 DashboardAssistant.prototype.logInfo = function(logText, open) {
 	//Mojo.Log.error("logInfo", logText);
 	this.controller.get('log-output').innerHTML = "<strong>" + logText + "</strong><br />" + this.controller.get('log-output').innerHTML.substr(0, 300) + "<br /><br />";
+	var signalDiv = this.controller.get('log-signal');
 	if (open) {
-		this.controller.get('log-signal').style.backgroundColor = "green";
+		signalDiv.style.backgroundColor = "green";
+		signalDiv.innerHTML = "<img src='images/watch-ok.png'>";
 	} else {
-		this.controller.get('log-signal').style.backgroundColor = "red";
+		signalDiv.style.backgroundColor = "red";
+		signalDiv.innerHTML = "<img src='images/watch-no.png'>";
 	}
 };
 

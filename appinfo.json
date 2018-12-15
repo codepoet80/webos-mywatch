@@ -1,11 +1,12 @@
 {
-	"id": "com.webos.mywatch",
-	"version": "0.9.23",
-	"vendor": "Jonathan Wise",
+	"id": "de.metaviewsoft.mwatch",
+	"version": "0.10.1",
+	"vendor": "MetaViewSoft",
 	"type": "web",
 	"main": "index.html",
 	"title": "My Watch",
 	"noWindow": true,
 	"miniicon": "icon24.png",
-	"icon": "icon48.png"
+	"icon": "icon48.png",
+	"splashicon": "modernclassic.png"
 }

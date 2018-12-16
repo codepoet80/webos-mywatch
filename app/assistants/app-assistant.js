@@ -177,6 +177,7 @@ AppAssistant.prototype.sendPing = function(caller, number) {
 };
 
 AppAssistant.prototype.sendInfo = function(info, wordwrap, icon, reason, appid, ring) {
+	Mojo.Log.error("***** sending appid: " + appid + " *****");
 	var value = valueOther;
 	var from = "Unknown";
 	var music = false;
@@ -1274,9 +1275,10 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 		}
 
 		if (launchParams && (typeof(launchParams) == 'object')) {
+			Mojo.Log.error("***** calling launcher: " + JSON.stringify(launchParams) + " ******");
 			if (1 || this.openspp) {
 				if (launchParams.command == "SMS") {
-					this.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, launchParams.appid, true);
+					this.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, appidMessage, true);
 				} else if (launchParams.command == "RING") {
 					this.sendRing(launchParams.caller, launchParams.number);
 				} else if (launchParams.command == "INFO") {

@@ -6,7 +6,7 @@
 	"main": "index.html",
 	"title": "My Watch",
 	"noWindow": true,
-	"miniicon": "icon24.png",
-	"icon": "icon48.png",
+	"miniicon": "icon48.png",
+	"icon": "icon64.png",
 	"splashicon": "modernclassic.png"
 }

@@ -1162,12 +1162,12 @@ AppAssistant.prototype.sendLog = function() {
 };
 
 AppAssistant.prototype.showInfo = function(logText) {
-	Mojo.Controller.getAppController().showBanner(logText, "", "");
+	Mojo.Controller.getAppController().showBanner({messageText: logText, icon: 'icon24.png'}, "", "");
 	this.logInfo(logText);
 };
 
 AppAssistant.prototype.showMsg = function(logText) {
-	Mojo.Controller.getAppController().showBanner(logText, "", "");
+	Mojo.Controller.getAppController().showBanner({messageText: logText, icon: 'icon24.png'}, "", "");
 };
 
 AppAssistant.prototype.cleanup = function(event) {

@@ -182,6 +182,12 @@ AppAssistant.prototype.sendInfo = function(info, wordwrap, icon, reason, appid, 
 	var from = "Unknown";
 	var music = false;
 
+	//Determine if a Message is actually an Email
+	var findLB = info.indexOf("\n");
+	var findAt = info.indexOf("@");
+	if (findLB > -1 && findAt > findLB)
+		appid = appidEmail;
+
 	this.logInfo("sendInfo");
 
 	if (appid == appidPhone) {
@@ -1292,7 +1298,18 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 			//If we weren't already running, and this is a notification launch, we should close ourselves
 			//	So as not to annoy the user
 			if (!appWasRunning)
-				closeWindowTimeout = setTimeout("closeAfterNotification()", 2500);
+			{
+				clearTimeout(closeWindowTimeout);
+				closeWindowTimeout = false;
+				switch (launchParams.command)
+				{
+					case "RING":
+						closeWindowTimeout = setTimeout("closeAfterNotification()", 10000);
+					default:
+						closeWindowTimeout = setTimeout("closeAfterNotification()", 3000);
+				}
+			}
+				
 		}
 
 		var now = (new Date()).getTime();

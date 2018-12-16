@@ -1304,9 +1304,17 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 				switch (launchParams.command)
 				{
 					case "RING":
+					{
+						Mojo.Log.warn("****** This is a ring, waiting 10 seconds to close");
 						closeWindowTimeout = setTimeout("closeAfterNotification()", 10000);
+						break;
+					}
 					default:
+					{
+						Mojo.Log.warn("****** This is another notification, waiting 3 seconds to close");
 						closeWindowTimeout = setTimeout("closeAfterNotification()", 3000);
+						break;
+					}
 				}
 			}
 				

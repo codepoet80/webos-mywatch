@@ -869,7 +869,7 @@ AppAssistant.prototype.readPortSuccess = function(objData) {
 							id: "com.palm.app.phone",
 							params: {action:"reject", hangupAll:true}
 						},
-						onSuccess: function() {this.logInfo("====> hanup ok");},
+						onSuccess: function() {this.logInfo("====> Hangup ok");},
 						onFailure: function(err) {this.logInfo("====> Hangup error: " + Object.toJSON(err));}
 					});
 
@@ -1019,7 +1019,7 @@ AppAssistant.prototype.readPortSuccess = function(objData) {
 									id: "com.palm.app.phone",
 									params: {action:"reject", hangupAll:true}
 								},
-								onSuccess: function() {this.logInfo("====> hanup ok");}.bind(this),
+								onSuccess: function() {this.logInfo("====> Hangup ok");}.bind(this),
 								onFailure: function(err) {this.logInfo("====> Hangup error: " + Object.toJSON(err));}.bind(this)
 							});
 						}
@@ -1305,14 +1305,14 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 				{
 					case "RING":
 					{
-						Mojo.Log.warn("****** This is a ring, waiting 10 seconds to close");
-						closeWindowTimeout = setTimeout("closeAfterNotification()", 10000);
+						Mojo.Log.warn("****** This is a ring, waiting 12 seconds to close");
+						closeWindowTimeout = setTimeout("closeAfterNotification()", 12000);
 						break;
 					}
 					default:
 					{
 						Mojo.Log.warn("****** This is another notification, waiting 3 seconds to close");
-						closeWindowTimeout = setTimeout("closeAfterNotification()", 3000);
+						closeWindowTimeout = setTimeout("closeAfterNotification()", 3500);
 						break;
 					}
 				}

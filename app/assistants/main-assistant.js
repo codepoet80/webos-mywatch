@@ -231,6 +231,7 @@ MainAssistant.prototype.handleOtherUpdate = function(event) {
 };
 
 MainAssistant.prototype.sendHangup = function() {
+	Mojo.Log.error("Sending hangup request");
 	this.controller.serviceRequest("palm://com.palm.applicationManager", {
 		method: "open",
 		parameters: {

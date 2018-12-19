@@ -60,7 +60,7 @@ DashboardAssistant.prototype.deactivate = function(event) {
 // Close the dashboard
 DashboardAssistant.prototype.cleanup = function() {
 	var appController = Mojo.Controller.getAppController();
-	appController.closeStage("dashboard");
+	appController.closeStage(watchType, "dashboard");
 	this.controller.stopListening("dashicon", Mojo.Event.tap, this.iconHandler);
 	this.controller.stopListening("dashtext", Mojo.Event.tap, this.textHandler);
 };

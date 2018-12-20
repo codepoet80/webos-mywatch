@@ -139,7 +139,7 @@ BluetoothModel.prototype.sendText = function(watchType, instanceId, targetAddres
 			if (this.toSendEntry.music) {
 				var arr = this.toSendEntry.info.split("\n", 3);
 				data = pebbleHelper.CreatePebbleMusicinfo((arr.length > 0) ? arr[0] : "", (arr.length > 2) ? arr[2] : "", (arr.length > 1) ? arr[1] : "");
-			} else if (this.version == 3) {
+			} else if (this.version == 3 || (this.version == 4)) {
 				var from = this.toSendEntry.from;
 				var info = this.toSendEntry.info;
 				data = this.toSendEntry.info.split("\n", 2);
@@ -649,6 +649,9 @@ BluetoothModel.prototype.readPortSuccess = function(objData, watchType, instance
 						if ((data.charCodeAt(9) == 51) || (data.charCodeAt(10) == 51)) {
 							logger("Pebble OS Version 3 found.");
 							this.version = 3;
+						} else if ((data.charCodeAt(9) == 52) || (data.charCodeAt(10) == 52)) {
+							this.logInfo("Pebble OS Version 4 found.");
+							this.version = 4;
 						}
 						var version = data.charCodeAt(50) + 5;
 						if ((version > 0) && (version < hwRevisions.length)) {
@@ -657,8 +660,8 @@ BluetoothModel.prototype.readPortSuccess = function(objData, watchType, instance
 							logger("HW Revision unknwon (" + version + ")");
 						}
 						//logger(data.charCodeAt(4) + " " + data.charCodeAt(5) + " " + data.charCodeAt(6) + " " + data.charCodeAt(7));
-					//} else if (id == pebbleHelper.PebbleCommands["PEBBLE_TIME"]) {
-						if (this.version == 3) {
+						//} else if (id == pebbleHelper.PebbleCommands["PEBBLE_TIME"]) {
+						if (this.version == 3 || this.version == 4) {
 							reply = pebbleHelper.CreatePebbleTime30();
                             //logger(pebbleHelper.CreatePebbleNotification30("Titel", "Subject"));
 						} else {

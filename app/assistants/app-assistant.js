@@ -1,14 +1,13 @@
+var myAppId = "de.metaviewsoft.mwatch";
+var watchType = "Pebble";
 var gblLaunchParams;
 var gblRelaunched;
-
-var watchType = "Pebble";
-var myAppId = "de.metaviewsoft.mwatch";
-
 var gblTimeOutHdl = 0;
-
 var valueAll = 0;
 var valueOther = 0;
-
+var timeoutValue = 0;
+var timeoutMusicPhoneValue = 5 * 60; // hardcoded: 5 min timeout for phone and music messages
+var lostConnectionValue = 0;
 var appIds= {
 	"com.palm.app.phone": {"value":0, "name":"Phone", "icon":"ICON_NOTIFICATION_GENERIC"},
 	"com.palm.app.email": {"value":0, "name":"Email", "icon":"ICON_GENERIC_EMAIL"},
@@ -19,6 +18,11 @@ var appIds= {
 	"luna.battery.alert": {"value":0, "name":"Battery", "icon":"ICON_TIMELINE_CALENDAR"},
 	"com.palm.app.calendar": {"value":0, "name":"Calendar", "icon":"ICON_BLUESCREEN_OF_DEATH"},
 }
+var lastMusicAppId = findAppIdByName("Music");
+var MainStageName = "main";
+var DashboardName = "dashboard";
+var bluetoothModel = null;
+var pebbleModel = null;
 findAppIdByName = function(name)
 {
 	for (var app in appIds) {
@@ -28,15 +32,6 @@ findAppIdByName = function(name)
 	Mojo.Log.error("App ID couldn't be resolved for the app name " + name);
 }
 
-var timeoutValue = 0;
-var timeoutMusicPhoneValue = 5 * 60; // hardcoded: 5 min timeout for phone and music messages
-var lostConnectionValue = 0;
-var lastMusicAppId = findAppIdByName("Music");
-
-var MainStageName = "main";
-var DashboardName = "dashboard";
-var bluetoothModel = null;
-var pebbleModel = null;
 function AppAssistant (appController) {
 	this.appController = appController;
 	pebbleModel = new PebbleModel();
@@ -61,6 +56,149 @@ function AppAssistant (appController) {
 
 	patternDB = openDatabase("ext:WhiteList", "1.0", "WhiteList", "10000");
 	refreshPatterns();
+}
+
+var closeWindowTimeout = false;
+AppAssistant.prototype.handleLaunch = function(launchParams) {
+	//clearTimeout(closeWindowTimeout);
+	//closeWindowTimeout = false;
+	myAppId = Mojo.Controller.appInfo.id;
+	gblLaunchParams = launchParams;
+	this.loadCookieValues();
+	this.logInfo('Params: ' + Object.toJSON(launchParams));
+
+	try {
+		var dashboardFound = false;
+		if (launchParams && (typeof(launchParams) == 'object')) {
+			var dashboardStage = this.appController.getStageController(DashboardName);
+			if (dashboardStage) {
+				this.logInfo('App Dashboard launch, dashboard already exists.');
+				gblRelaunched = true;
+				dashboardStage.delegateToSceneAssistant("displayDashboard", launchParams.dashInfo);
+				dashboardFound = true;
+			} else {
+				this.logInfo('App Dashboard launch, dashboard could not be found');
+			};
+		}
+		if (!dashboardFound)
+		{
+			// Look for an existing main stage by name.
+			var stageProxy = this.controller.getStageProxy(MainStageName);
+			var stageController = this.controller.getStageController(MainStageName);
+			if (stageProxy) {
+				this.logInfo('App launching existing main scene.');
+				gblRelaunched = true;
+				// If the stage exists, just bring it to the front by focusing its window.
+				// Or, if it is just the proxy, then it is being focused, so exit.
+				if (stageController) {
+					//stageController.window.focus();
+				}
+				if (!(gblLaunchParams.dockMode || gblLaunchParams.touchstoneMode)) {
+					stageProxy.delegateToSceneAssistant("handleLaunchParams");
+				}
+			} else {
+				this.logInfo('App launching with new main scene.');
+				gblRelaunched = false;
+				// Create a callback function to set up the new main stage
+				// after it is done loading. It is passed the new stage controller
+				// as the first parameter.
+				var pushMainScene = function(stageController) {
+					stageController.pushScene(MainStageName);
+				};
+				var stageArguments = {name: MainStageName, lightweight: true};
+				// Specify the stage type with the last property.
+				this.controller.createStageWithCallback(stageArguments, pushMainScene, (gblLaunchParams.dockMode || gblLaunchParams.touchstoneMode) ? "dockMode" : "card");
+			}
+		}
+
+		if (launchParams && (typeof(launchParams) == 'object')) {
+			Mojo.Log.error("***** launch called with: " + JSON.stringify(launchParams) + " ******");
+			if (1 || bluetoothModel.getOpen()) {
+				if (launchParams.command == "SMS") {
+					bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, findAppIdByName("Messaging"), true, watchType, this.instanceId, this.targetAddress);
+				} else if (launchParams.command == "RING") {
+					bluetoothModel.sendRing(launchParams.caller, launchParams.number, watchType, this.instanceId, this.targetAddress);
+				} else if (launchParams.command == "INFO") {
+					bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, launchParams.appid, false, watchType, this.instanceId, this.targetAddress);
+				} else if (launchParams.command == "HANGUP") {
+					bluetoothModel.hangup(watchType, this.instanceId, this.targetAddress);
+				} else if (launchParams.command == "PING") {
+					bluetoothModel.sendPing("", "", watchType, this.instanceId, this.targetAddress);
+				}
+			}
+			//If we weren't already running, and this is a notification launch, we should close ourselves after a delay
+			//	So as not to annoy the user
+			if (!gblRelaunched)
+			{
+				clearTimeout(closeWindowTimeout);
+				closeWindowTimeout = false;
+				switch (launchParams.command)
+				{
+					case "RING":
+					{
+						Mojo.Log.warn("****** This is a ring, waiting 12 seconds to close");
+						//closeWindowTimeout = setTimeout("closeAfterNotification()", 12000);
+						break;
+					}
+					default:
+					{
+						Mojo.Log.warn("****** This is another notification, waiting 3 seconds to close");
+						//closeWindowTimeout = setTimeout("closeAfterNotification()", 3500);
+						break;
+					}
+				}
+			}
+				
+		}
+
+		var now = (new Date()).getTime();
+		this.logInfo("handleLaunch " + watchType + " " + (now - this.lastNotify));
+		// not registered for notification or last notification too long ago
+		if (!this.sppNotificationService) {
+			if (watchType == "MW150") {
+				this.subscribe();
+			} else if (watchType == "Pebble") {
+				// bluetooth
+				Mojo.Log.warn("** subscribing to pebble");
+				this.subscribe();
+				this.logInfo("** gettrusteddevices start " + this.urlgap);
+				new Mojo.Service.Request(this.urlgap, {
+					method: 'gettrusteddevices',
+					parameters: {},
+					onSuccess: function (e) {
+						Mojo.Log.error("gettrusteddevices success");
+						for (var i=0; i<e.trusteddevices.length; i++) {
+							Mojo.Log.error(e.trusteddevices[i].name + " " + e.trusteddevices[i].address);
+							if (e.trusteddevices[i].name.search(/Pebble/i) > -1) {
+								//buttons.push({label: e.trusteddevices[i].name, value: e.trusteddevices[i].address});
+								Mojo.Log.error("** Connecting to " + e.trusteddevices[i].name);
+								this.targetAddress = e.trusteddevices[i].address;
+								bluetoothModel.connect(watchType, this.targetAddress);
+								Mojo.Log.error("** Connected to " + e.trusteddevices[i].name);
+								break;
+							}
+							else
+								Mojo.Log.error("can't find a pebble");
+						}
+					}.bind(this),
+					onFailure: function (e) {tMojo.Log.error("gettrusteddevices failure, results="+JSON.stringify(e));}.bind(this)
+				});
+				this.logInfo("** gettrusteddevices done " + this.urlgap);
+			} else if (watchType == "LiveView") {
+				this.subscribe();
+			}
+		}
+	} catch (e) {
+		Mojo.Log.error(e);
+	}
+};
+
+closeAfterNotification = function()
+{
+	closeWindowTimeout = false;
+	clearTimeout(closeWindowTimeout);
+	Mojo.Log.error("Closing after notification");
+	Mojo.Controller.getAppController().closeAllStages()
 }
 
 refreshPatterns = function() {
@@ -286,149 +424,6 @@ AppAssistant.prototype.cleanup = function(event) {
 	});
 
 };
-
-var closeWindowTimeout = false;
-AppAssistant.prototype.handleLaunch = function(launchParams) {
-	//clearTimeout(closeWindowTimeout);
-	//closeWindowTimeout = false;
-	myAppId = Mojo.Controller.appInfo.id;
-	gblLaunchParams = launchParams;
-	this.loadCookieValues();
-	this.logInfo('Params: ' + Object.toJSON(launchParams));
-
-	try {
-		var dashboardFound = false;
-		if (launchParams && (typeof(launchParams) == 'object')) {
-			var dashboardStage = this.appController.getStageController(DashboardName);
-			if (dashboardStage) {
-				this.logInfo('App Dashboard launch, dashboard already exists.');
-				gblRelaunched = true;
-				dashboardStage.delegateToSceneAssistant("displayDashboard", launchParams.dashInfo);
-				dashboardFound = true;
-			} else {
-				this.logInfo('App Dashboard launch, dashboard could not be found');
-			};
-		}
-		if (!dashboardFound)
-		{
-			// Look for an existing main stage by name.
-			var stageProxy = this.controller.getStageProxy(MainStageName);
-			var stageController = this.controller.getStageController(MainStageName);
-			if (stageProxy) {
-				this.logInfo('App launching existing main scene.');
-				gblRelaunched = true;
-				// If the stage exists, just bring it to the front by focusing its window.
-				// Or, if it is just the proxy, then it is being focused, so exit.
-				if (stageController) {
-					//stageController.window.focus();
-				}
-				if (!(gblLaunchParams.dockMode || gblLaunchParams.touchstoneMode)) {
-					stageProxy.delegateToSceneAssistant("handleLaunchParams");
-				}
-			} else {
-				this.logInfo('App launching with new main scene.');
-				gblRelaunched = false;
-				// Create a callback function to set up the new main stage
-				// after it is done loading. It is passed the new stage controller
-				// as the first parameter.
-				var pushMainScene = function(stageController) {
-					stageController.pushScene(MainStageName);
-				};
-				var stageArguments = {name: MainStageName, lightweight: true};
-				// Specify the stage type with the last property.
-				this.controller.createStageWithCallback(stageArguments, pushMainScene, (gblLaunchParams.dockMode || gblLaunchParams.touchstoneMode) ? "dockMode" : "card");
-			}
-		}
-
-		if (launchParams && (typeof(launchParams) == 'object')) {
-			Mojo.Log.error("***** launch called with: " + JSON.stringify(launchParams) + " ******");
-			if (1 || bluetoothModel.getOpen()) {
-				if (launchParams.command == "SMS") {
-					bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, findAppIdByName("Messaging"), true, watchType, this.instanceId, this.targetAddress);
-				} else if (launchParams.command == "RING") {
-					bluetoothModel.sendRing(launchParams.caller, launchParams.number, watchType, this.instanceId, this.targetAddress);
-				} else if (launchParams.command == "INFO") {
-					bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, launchParams.appid, false, watchType, this.instanceId, this.targetAddress);
-				} else if (launchParams.command == "HANGUP") {
-					bluetoothModel.hangup(watchType, this.instanceId, this.targetAddress);
-				} else if (launchParams.command == "PING") {
-					bluetoothModel.sendPing("", "", watchType, this.instanceId, this.targetAddress);
-				}
-			}
-			//If we weren't already running, and this is a notification launch, we should close ourselves after a delay
-			//	So as not to annoy the user
-			if (!gblRelaunched)
-			{
-				clearTimeout(closeWindowTimeout);
-				closeWindowTimeout = false;
-				switch (launchParams.command)
-				{
-					case "RING":
-					{
-						Mojo.Log.warn("****** This is a ring, waiting 12 seconds to close");
-						//closeWindowTimeout = setTimeout("closeAfterNotification()", 12000);
-						break;
-					}
-					default:
-					{
-						Mojo.Log.warn("****** This is another notification, waiting 3 seconds to close");
-						//closeWindowTimeout = setTimeout("closeAfterNotification()", 3500);
-						break;
-					}
-				}
-			}
-				
-		}
-
-		var now = (new Date()).getTime();
-		this.logInfo("handleLaunch " + watchType + " " + (now - this.lastNotify));
-		// not registered for notification or last notification too long ago
-		if (!this.sppNotificationService) {
-			if (watchType == "MW150") {
-				this.subscribe();
-			} else if (watchType == "Pebble") {
-				// bluetooth
-				Mojo.Log.warn("** subscribing to pebble");
-				this.subscribe();
-				this.logInfo("** gettrusteddevices start " + this.urlgap);
-				new Mojo.Service.Request(this.urlgap, {
-					method: 'gettrusteddevices',
-					parameters: {},
-					onSuccess: function (e) {
-						Mojo.Log.error("gettrusteddevices success");
-						for (var i=0; i<e.trusteddevices.length; i++) {
-							Mojo.Log.error(e.trusteddevices[i].name + " " + e.trusteddevices[i].address);
-							if (e.trusteddevices[i].name.search(/Pebble/i) > -1) {
-								//buttons.push({label: e.trusteddevices[i].name, value: e.trusteddevices[i].address});
-								Mojo.Log.error("** Connecting to " + e.trusteddevices[i].name);
-								this.targetAddress = e.trusteddevices[i].address;
-								bluetoothModel.connect(watchType, this.targetAddress);
-								Mojo.Log.error("** Connected to " + e.trusteddevices[i].name);
-								break;
-							}
-							else
-								Mojo.Log.error("can't find a pebble");
-						}
-					}.bind(this),
-					onFailure: function (e) {tMojo.Log.error("gettrusteddevices failure, results="+JSON.stringify(e));}.bind(this)
-				});
-				this.logInfo("** gettrusteddevices done " + this.urlgap);
-			} else if (watchType == "LiveView") {
-				this.subscribe();
-			}
-		}
-	} catch (e) {
-		Mojo.Log.error(e);
-	}
-};
-
-closeAfterNotification = function()
-{
-	closeWindowTimeout = false;
-	clearTimeout(closeWindowTimeout);
-	Mojo.Log.error("Closing after notification");
-	Mojo.Controller.getAppController().closeAllStages()
-}
 
 AppAssistant.prototype.loadCookieValues = function()
 {

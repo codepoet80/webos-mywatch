@@ -258,11 +258,12 @@ MainAssistant.prototype.testRing = function() {
 
 MainAssistant.prototype.testSms = function() {
 	Mojo.Log.error("Sending SMS request from app id " + myAppId);
+	var messagingId = findAppIdByName("Messaging");
 	this.controller.serviceRequest("palm://com.palm.applicationManager", {
 		method: "open",
 		parameters: {
 			id: myAppId,
-			params: {command: "SMS", info: "I've seen things you people wouldn't believe. Attack ships on fire off the shoulder of Orion.", appid: "com.palm.app.messaging", test: true}
+			params: {command: "SMS", info: "I've seen things you people wouldn't believe. Attack ships on fire off the shoulder of Orion.", appid: messagingId, test: true}
 		},
 		onSuccess: function() {},
 		onFailure: function() {}

@@ -2,50 +2,45 @@ var gblLaunchParams;
 var gblRelaunched;
 
 var watchType = "Pebble";
-var myAppId;
+var myAppId = "de.metaviewsoft.mwatch";
 
 var gblTimeOutHdl = 0;
 
 var valueAll = 0;
 var valueOther = 0;
 
-var appidPhone = "com.palm.app.phone";
-var valuePhone = 0;
-var namePhone = "Phone";
-var appidEmail = "com.palm.app.email";
-var valueEmail = 0;
-var nameEmail = "Email";
-var appidMessage = "com.palm.app.messaging";
-var valueMessage = 0;
-var nameMessage = "Messaging";
-var appidMusicPlayer = "com.palm.app.musicplayer";
-var valueMusicPlayer = 0;
-var nameMusicPlayer = "Music";
-var appidMusicRemix = "com.hedami.musicplayerremix";
-var valueMusicRemix = 0;
-var nameMusicRemix = "Music";
-var appidMacaw = "net.minego.phnx";
-var valueMacaw = 0;
-var nameMacaw = "Twitter";
-var appidBattery = "luna.battery.alert";
-var valueBattery = 0;
-var nameBattery = "Battery";
-var appidCalendar = "com.palm.app.calendar";
-var valueCalendar = 0;
-var nameCalendar = "Calendar";
+var appIds= {
+	"com.palm.app.phone": {"value":0, "name":"Phone", "icon":"ICON_NOTIFICATION_GENERIC"},
+	"com.palm.app.email": {"value":0, "name":"Email", "icon":"ICON_GENERIC_EMAIL"},
+	"com.palm.app.messaging": {"value":0, "name":"Messaging", "icon":"ICON_GENERIC_SMS"},
+	"com.palm.app.musicplayer": {"value":0, "name":"Music", "icon":"ICON_AUDIO_CASSETTE"},
+	"com.hedami.musicplayerremix": {"value":0, "name":"Music Player Remix", "icon":"ICON_AUDIO_CASSETTE"},
+	"net.minego.phnx": {"value":0, "name":"Twitter", "icon":"ICON_NOTIFICATION_TWITTER"},
+	"luna.battery.alert": {"value":0, "name":"Battery", "icon":"ICON_TIMELINE_CALENDAR"},
+	"com.palm.app.calendar": {"value":0, "name":"Calendar", "icon":"ICON_BLUESCREEN_OF_DEATH"},
+}
+findAppIdByName = function(name)
+{
+	for (var app in appIds) {
+		if (appIds[app].name.toLowerCase() == name.toLowerCase())
+			return app;
+	}
+	Mojo.Log.error("App ID couldn't be resolved for the app name " + name);
+}
 
 var timeoutValue = 0;
 var timeoutMusicPhoneValue = 5 * 60; // hardcoded: 5 min timeout for phone and music messages
 var lostConnectionValue = 0;
-
-var lastMusicAppId = appidMusicPlayer;
+var lastMusicAppId = findAppIdByName("Music");
 
 var MainStageName = "main";
 var DashboardName = "dashboard";
 var bluetoothModel = null;
+var pebbleModel = null;
 function AppAssistant (appController) {
 	this.appController = appController;
-	bluetoothModel = new BluetoothModel(this.logInfo, this.showInfo);
+	pebbleModel = new PebbleModel();
+	bluetoothModel = new BluetoothModel(this.logInfo, this.showInfo, pebbleModel);
 
     this.urlgap     = 'palm://com.palm.bluetooth/gap';
     this.urlspp     = 'palm://com.palm.bluetooth/spp';
@@ -101,7 +96,7 @@ AppAssistant.prototype.subscribe = function() {
 		parameters: {"subscribe": true},
 		onSuccess: this.sppNotify.bind(this),
 		onFailure: function (e) {
-			this.logInfo("subscribe failure " + e.errorText);
+			this.logInfo("!!! subscribe failure " + e.errorText);
 			this.sppNotificationService = null;
 		}.bind(this)
 	};
@@ -152,7 +147,7 @@ AppAssistant.prototype.sppNotify = function(objData)
 {
 	var that = this; // for scoping
 
-	this.logInfo("sppNotify started for " + watchType + " " + Object.toJSON(objData));
+	this.logInfo("*** sppNotify started for " + watchType + " " + Object.toJSON(objData));
 	this.lastNotify = (new Date()).getTime();
 	if (!objData.notification) {
 		if (valueAll == 2) {
@@ -237,55 +232,11 @@ AppAssistant.prototype.playAlarm = function(cnt) {
 	}
 };
 
-CreateLVMsg = function(id, payload) {
-	var result = [];
-	result.push(id);
-	result.push(0x04);
-	result.push((payload.length >> 24) & 0xff, (payload.length >> 16) & 0xff, (payload.length >> 8) & 0xff, payload.length & 0xff);
-	for (var i=0; i<payload.length; i++) {
-		result.push(payload[i]);
-	}
-	this.logInfo(result + " " + result.length);
-	for (var i=0; i<result.length; i++) {
-		this.logInfo(result[i]);
-	}
-	return result;
-};
-
-ConvertString = function(payload) {
-	var result = [];
-	result.push(payload.length);
-	for (var i=0; i<payload.length; i++) {
-		result.push(payload.charCodeAt(i));
-	}
-	return result;
-};
-
 AppAssistant.prototype.EvalPixel = function(inputData, index, value, THRESHOLD) {
 	if ((inputData[index + 0] + inputData[index + 1] + inputData[index + 2] + inputData[index + 3]) > THRESHOLD) {
 		return value;
 	}
 	return 0;
-};
-
-Dec2Hex = function(decimal) {
-	//Mojo.Log.error(decimal);
-	var hexChars = "0123456789ABCDEF";
-	var a = decimal % 16;
-	var b = (decimal - a)/16;
-	hex = "" + hexChars.charAt(b) + hexChars.charAt(a);
-	return hex;
-};
-
-padString = function(str, len) {
-	str = "" + str;
-	if (str.length > len) {
-		return str.substr(str.length - len);
-	}
-	while (str.length < len) {
-		str = "0" + str;
-	}
-	return str;
 };
 
 AppAssistant.prototype.logInfo = function(logText) {
@@ -393,7 +344,7 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 			Mojo.Log.error("***** launch called with: " + JSON.stringify(launchParams) + " ******");
 			if (1 || bluetoothModel.getOpen()) {
 				if (launchParams.command == "SMS") {
-					bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, appidMessage, true, watchType, this.instanceId, this.targetAddress);
+					bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, findAppIdByName("Messaging"), true, watchType, this.instanceId, this.targetAddress);
 				} else if (launchParams.command == "RING") {
 					bluetoothModel.sendRing(launchParams.caller, launchParams.number, watchType, this.instanceId, this.targetAddress);
 				} else if (launchParams.command == "INFO") {

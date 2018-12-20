@@ -1,8 +1,12 @@
 var logger;
 var notifier;
-var BluetoothModel = function(logHandler, userNotifier) { 
+var pebbleHelper;
+
+var BluetoothModel = function(logHandler, userNotifier, pebbleModel) { 
     logger = logHandler;
-    notifier = userNotifier
+	notifier = userNotifier;
+	pebbleHelper = pebbleModel;
+	
     this.openspp = false;
     this.initOpen = true;
     this.entries = [];
@@ -39,7 +43,7 @@ BluetoothModel.prototype.sendPing = function(caller, number, watchType, instance
 			var data = "\r\nRING\r\n";
 			this.write(data, data.length, watchType, instanceId, targetAddress);
 		} else if (watchType == "Pebble") {
-			var data = CreatePebblePing();
+			var data = pebbleHelper.CreatePebblePing();
 			this.write(data, data.length, watchType, instanceId, targetAddress);
 		} else if (watchType == "LiveView") {
 			// green
@@ -59,7 +63,6 @@ BluetoothModel.prototype.sendPing = function(caller, number, watchType, instance
 };
 
 BluetoothModel.prototype.sendInfo = function(info, wordwrap, icon, reason, appid, ring, watchType, instanceId, targetAddress) {
-	Mojo.Log.error("***** sending appid: " + appid + " *****");
 	var value = valueOther;
 	var from = "Unknown";
 	var music = false;
@@ -68,41 +71,15 @@ BluetoothModel.prototype.sendInfo = function(info, wordwrap, icon, reason, appid
 	var findLB = info.indexOf("\n");
 	var findAt = info.indexOf("@");
 	if (findLB > -1 && findAt > findLB)
-		appid = appidEmail;
+		appid = appIds["appidEmail"].id;
 
-    logger("sendInfo app id now: " + appid);
-
-	if (appid == appidPhone) {
-		value = valuePhone;
-		from = namePhone;
-	} else if (appid == appidEmail) {
-		value = valueEmail;
-		from = nameEmail;
-	} else if (appid == appidMessage) {
-		value = valueMessage;
-		from = nameMessage;
-	} else if (appid == appidMusicPlayer) {
-		value = valueMusicPlayer;
-		from = nameMusicPlayer;
-		lastMusicAppId = appidMusicPlayer;
-		music = true;
-	} else if (appid == appidMusicRemix) {
-		value = valueMusicRemix;
-		from = nameMusicRemix;
-		lastMusicAppId = appidMusicPlayer;
-		music = true;
-	} else if (appid == appidMacaw) {
-		value = valueMacaw;
-		from = nameMacaw;
-	} else if (appid == appidBattery) {
-		value = valueBattery;
-		from = nameBattery;
-    }
-    
+	logger("sendInfo app id now: " + appid);
+	value = appIds[appid].value;
+	from = appIds[appid].name;
     logger("sendInfo value " + value + " from: " + from);
 
 	var accepted = false;
-	if ((appid != appidEmail) || (pattern.length == 0) || info.test) {
+	if ((appid != findAppIdByName("Messaging")) || (pattern.length == 0) || info.test) {
 		accepted = true;
 	} else {
 		for (var i=0; i<pattern.length; i++) {
@@ -161,7 +138,7 @@ BluetoothModel.prototype.sendText = function(watchType, instanceId, targetAddres
 			var data;
 			if (this.toSendEntry.music) {
 				var arr = this.toSendEntry.info.split("\n", 3);
-				data = CreatePebbleMusicinfo((arr.length > 0) ? arr[0] : "", (arr.length > 2) ? arr[2] : "", (arr.length > 1) ? arr[1] : "");
+				data = pebbleHelper.CreatePebbleMusicinfo((arr.length > 0) ? arr[0] : "", (arr.length > 2) ? arr[2] : "", (arr.length > 1) ? arr[1] : "");
 			} else if (this.version == 3) {
 				var from = this.toSendEntry.from;
 				var info = this.toSendEntry.info;
@@ -170,9 +147,9 @@ BluetoothModel.prototype.sendText = function(watchType, instanceId, targetAddres
 					from = data[1];
 					info = data[0];
 				}
-				data = CreatePebbleNotification30(from, info, this.toSendEntry.appid);
+				data = pebbleHelper.CreatePebbleNotification30(from, info, this.toSendEntry.appid);
 			} else if (this.version == 2) {
-				data = CreatePebbleNotification(this.toSendEntry.from, this.toSendEntry.info);
+				data = pebbleHelper.CreatePebbleNotification(this.toSendEntry.from, this.toSendEntry.info);
 			} else {
 				// unknown pebble version, send both types
 				var from = this.toSendEntry.from;
@@ -182,9 +159,9 @@ BluetoothModel.prototype.sendText = function(watchType, instanceId, targetAddres
 					from = data[1];
 					info = data[0];
 				}
-				data = CreatePebbleNotification30(from, info, this.toSendEntry.appid);
+				data = pebbleHelper.CreatePebbleNotification30(from, info, this.toSendEntry.appid);
 				this.write(data, data.length, watchType, instanceId, targetAddress);
-				data = CreatePebbleNotification(this.toSendEntry.from, this.toSendEntry.info);
+				data = pebbleHelper.CreatePebbleNotification(this.toSendEntry.from, this.toSendEntry.info);
 			}
 			this.write(data, data.length, watchType, instanceId, targetAddress);
 			this.toSendEntry = null;
@@ -214,7 +191,7 @@ BluetoothModel.prototype.sendRing = function(caller, number, watchType, instance
 				this.write(data, data.length, watchType, instanceId, targetAddress);
 			}
 		} else if (watchType == "Pebble") {
-			var data = CreatePebblePhoneinfo(caller, number);
+			var data = pebbleHelper.CreatePebblePhoneinfo(caller, number);
 			this.write(data, data.length, watchType, instanceId, targetAddress);
 			setTimeout(bluetoothModel.pebbleRing(watchType, instanceId, targetAddress), 2000);
 		} else if (watchType == "LiveView") {
@@ -240,9 +217,9 @@ BluetoothModel.prototype.hangup = function(watchType, instanceId, targetAddress)
 		var data = "\r\n+CIEV: 4,0\r\n";
 		this.write(data, data.length, watchType, instanceId, targetAddress);
 	} else if (watchType == "Pebble") {
-		var data = CreatePebbleHangup();
+		var data = pebbleHelper.CreatePebbleHangup();
 		this.write(data, data.length, watchType, instanceId, targetAddress);
-		data = CreatePebbleRingEnd();
+		data = pebbleHelper.CreatePebbleRingEnd();
 		this.write(data, data.length, watchType, instanceId, targetAddress);
 	} else if (watchType == "LiveView") {
 	}
@@ -251,7 +228,7 @@ BluetoothModel.prototype.hangup = function(watchType, instanceId, targetAddress)
 //Pebble Specific
 BluetoothModel.prototype.pebbleRing = function(watchType, instanceId, targetAddress) {
 	Mojo.Log.error("doing pebble ring for :" + watchType + ", instance: " + instanceId + ", target: " + targetAddress);
-	var data = CreatePebbleRinger();
+	var data = pebbleHelper.CreatePebbleRinger();
 	bluetoothModel.write(data, data.length, watchType, instanceId, targetAddress);
 	setTimeout(function() {
 		bluetoothModel.pebbleRingEnd(watchType, instanceId, targetAddress);
@@ -261,7 +238,7 @@ BluetoothModel.prototype.pebbleRing = function(watchType, instanceId, targetAddr
 
 BluetoothModel.prototype.pebbleRingEnd = function(watchType, instanceId, targetAddress) {
 	Mojo.Log.error("doing pebble ring END for " + watchType + " instance: " + instanceId + " target: " + targetAddress);
-	var data = CreatePebbleRingEnd();
+	var data = pebbleHelper.CreatePebbleRingEnd();
 	bluetoothModel.write(data, data.length, watchType, instanceId, targetAddress);
 };
 
@@ -298,7 +275,7 @@ BluetoothModel.prototype.open = function(urlService, watchType, instanceId, targ
 					bluetoothModel.read(watchType, instanceId, targetAddress);
 				} else if (watchType == "Pebble") {
 					//this.read();
-					var msg = CreatePebbleVersion();
+					var msg = pebbleHelper.CreatePebbleVersion();
 					bluetoothModel.write(msg, msg.length, watchType, instanceId, targetAddress);
 					bluetoothModel.writeData(watchType, instanceId, targetAddress);
 				} else if (watchType == "LiveView") {
@@ -554,42 +531,6 @@ BluetoothModel.prototype.readPortSuccess = function(objData, watchType, instance
 									reply += Dec2Hex((line[x+0]?128:0) + (line[x+1]?64:0) + (line[x+2]?32:0) + (line[x+3]?16:0) + (line[x+4]?8:0) + (line[x+5]?4:0) + (line[x+6]?2:0) + (line[x+7]?1:0));
 								}
 							}
-							/*
-							} else {
-								var canvas = document.createElement('canvas');
-								canvas.height = 16;
-								canvas.width = 192;
-								var ctx = canvas.getContext('2d');
-								ctx.font = ((arrText.length > 1) ? "7pt" : "12pt") + " Serif";
-								ctx.fillStyle = "white";
-								ctx.textAlign = "left";
-								ctx.textBaseline = "middle";
-
-								ctx.fillText(arrText[0], 0, canvas.height / 2);
-								var THRESHOLD = 3*255+65;
-
-								var input = ctx.getImageData(0, 0, canvas.width, canvas.height);
-								var inputData = input.data;
-
-								reply = "\r\n*SETBC: 0,";
-								for (var y=0; y<16; y++) {
-									for (var x=0; x<192/8; x++) {
-										var index = 4 * (y * canvas.width + x * 8);
-										//Mojo.Log.error(">",y,x,inputData[index + 3],inputData[index + 7],inputData[index + 11],inputData[index + 15],inputData[index + 19],inputData[index + 23],inputData[index + 27],inputData[index + 31]);
-										reply += Dec2Hex(
-											this.EvalPixel(inputData, index + 0, 128, THRESHOLD) +
-											this.EvalPixel(inputData, index + 4, 64, THRESHOLD) +
-											this.EvalPixel(inputData, index + 8, 32, THRESHOLD) +
-											this.EvalPixel(inputData, index + 12, 16, THRESHOLD) +
-											this.EvalPixel(inputData, index + 16, 8, THRESHOLD) +
-											this.EvalPixel(inputData, index + 20, 4, THRESHOLD) +
-											this.EvalPixel(inputData, index + 24, 2, THRESHOLD) +
-											this.EvalPixel(inputData, index + 28, 1, THRESHOLD)
-										);
-									}
-								}
-							}
-							*/
 							reply += "\r\n";
 						}
 						reply += "\r\nOK\r\n";
@@ -606,6 +547,7 @@ BluetoothModel.prototype.readPortSuccess = function(objData, watchType, instance
 						"," + padString(now.getHours(), 2) + ":" + padString(now.getMinutes(), 2) + ":" + padString(now.getSeconds(), 2) + "+00\"\r\n\r\nOK\r\n";
 				} else if (data.search(/AT\+CHUP/) == 0) {
 					Mojo.Controller.getAppController().showBanner("Hangup", "", "");
+					//TODO: We can use this now!
 					/* This only works if the appid is com.palm.x
 					new Mojo.Service.Request("palm://com.palm.telephony", {
 						method: "hangupAll",
@@ -687,17 +629,17 @@ BluetoothModel.prototype.readPortSuccess = function(objData, watchType, instance
 					var length = (data.charCodeAt(0) << 8) | data.charCodeAt(1);
 					var id = (data.charCodeAt(2) << 8) | data.charCodeAt(3);
 					var name = "unknown";
-					for (var i=0; i<pebble_cmds.length; i++) {
-						if (pebble_cmds[i].cmd == id) {
-							name = pebble_cmds[i].name;
+					for (var cmd in pebbleHelper.PebbleCommands) {
+						if (cmd == id) {
+							name = cmd;
 						}
 					}
 					logger("read id: " + id + " name: " + name + " len: " + length);
-					if (id == PEBBLE_PHONE_VERSION) {
+					if (id == pebbleHelper.PebbleCommands["PEBBLE_PHONE_VERSION"]) {
 						//                                                       |        -1            |      session          | android, telephony, sms | response version
-						//reply = CreatePebbleMsg(PEBBLE_PHONE_VERSION, [0x01, 0xff, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x32, 0x02, 0x02, 0x00, 0x00]);
-						reply = CreatePebblePhoneVersion30();
-					} else if (id == PEBBLE_VERSIONS) {
+						//reply = pebbleHelper.CreatePebbleMsg(pebbleHelper.PebbleCommands["PEBBLE_PHONE_VERSION"], [0x01, 0xff, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x32, 0x02, 0x02, 0x00, 0x00]);
+						reply = pebbleHelper.CreatePebblePhoneVersion30();
+					} else if (id == pebbleHelper.PebbleCommands["PEBBLE_VERSIONS"]) {
 						this.version = 2;
 						logger("Version: " + data[9] + data[10] + data[11] + data[12] + data[13] + data[14] + data[15]);
 						var hwRevisions = ["spalding_bb2", "snowy_bb2", "snowy_bb", "bb2", "bb", // emulators
@@ -715,14 +657,14 @@ BluetoothModel.prototype.readPortSuccess = function(objData, watchType, instance
 							logger("HW Revision unknwon (" + version + ")");
 						}
 						//logger(data.charCodeAt(4) + " " + data.charCodeAt(5) + " " + data.charCodeAt(6) + " " + data.charCodeAt(7));
-					//} else if (id == PEBBLE_TIME) {
+					//} else if (id == pebbleHelper.PebbleCommands["PEBBLE_TIME"]) {
 						if (this.version == 3) {
-							reply = CreatePebbleTime30();
-                            //logger(this.CreatePebbleNotification30("Titel", "Subject"));
+							reply = pebbleHelper.CreatePebbleTime30();
+                            //logger(pebbleHelper.CreatePebbleNotification30("Titel", "Subject"));
 						} else {
-							reply = CreatePebbleTime();
+							reply = pebbleHelper.CreatePebbleTime();
 						}
-					} else if (id == PEBBLE_MUSIC_CONTROL) {
+					} else if (id == pebbleHelper.PebbleCommands["MUSIC_CONTROL"]) {
 						var action = data.charCodeAt(4);
 						logger("MusicControl:" + action);
 						if (action == 1) {
@@ -754,11 +696,11 @@ BluetoothModel.prototype.readPortSuccess = function(objData, watchType, instance
 							});
 						} else if (action == 8) {
 							// send now playing infos
-							reply = CreatePebbleMusicinfo(this.artist, this.album, this.track);
+							reply = pebbleHelper.CreatePebbleMusicinfo(this.artist, this.album, this.track);
 						} else {
 						}
 						this.lastMusicPhoneWrite = (new Date()).getTime();
-					} else if (id == PEBBLE_PHONE_CONTROL) {
+					} else if (id == pebbleHelper.PebbleCommands["PEBBLE_PHONE_CONTROL"]) {
 						var action = data.charCodeAt(4);
 						logger("PhoneControl:" + action);
 						if (action == 2) {
@@ -806,16 +748,8 @@ BluetoothModel.prototype.readPortSuccess = function(objData, watchType, instance
 						reply = [MSG_GETMENUITEM_RESP, 0x04, 0x00, 0x00, 0x00, 0x12, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, "A".charCodeAt(0), "B".charCodeAt(0), "C".charCodeAt(0)];
 						reply[5] = reply[5] + image.length;
 						reply = reply.concat(image);
-						/*
-						this.write(reply, reply.length, watchType, instanceId, targetAddress);
-						reply[13] = 4;
-						this.write(reply, reply.length, watchType, instanceId, targetAddress);
-						reply[13] = 5;
-						this.write(reply, reply.length, watchType, instanceId, targetAddress);
-						reply[13] = 6;
-						*/
 					} else {
-						logger("**** Unknown id ****", id);
+						logger("Problem with readPortSuccess id: ", id);
 					}
 				}
 			}
@@ -874,4 +808,49 @@ BluetoothModel.prototype.closeConnection = function(watchType, instanceId, targe
 			gblTimeOutHdl = setTimeout(bluetoothModel.closeConnection(watchType, instanceId, targetAddress), timeoutValue * 1000);
 		}
 	}
+};
+
+//Helpers
+CreateLVMsg = function(id, payload) {
+	var result = [];
+	result.push(id);
+	result.push(0x04);
+	result.push((payload.length >> 24) & 0xff, (payload.length >> 16) & 0xff, (payload.length >> 8) & 0xff, payload.length & 0xff);
+	for (var i=0; i<payload.length; i++) {
+		result.push(payload[i]);
+	}
+	this.logInfo(result + " " + result.length);
+	for (var i=0; i<result.length; i++) {
+		this.logInfo(result[i]);
+	}
+	return result;
+};
+
+ConvertString = function(payload) {
+	var result = [];
+	result.push(payload.length);
+	for (var i=0; i<payload.length; i++) {
+		result.push(payload.charCodeAt(i));
+	}
+	return result;
+};
+
+Dec2Hex = function(decimal) {
+	//Mojo.Log.error(decimal);
+	var hexChars = "0123456789ABCDEF";
+	var a = decimal % 16;
+	var b = (decimal - a)/16;
+	hex = "" + hexChars.charAt(b) + hexChars.charAt(a);
+	return hex;
+};
+
+padString = function(str, len) {
+	str = "" + str;
+	if (str.length > len) {
+		return str.substr(str.length - len);
+	}
+	while (str.length < len) {
+		str = "0" + str;
+	}
+	return str;
 };

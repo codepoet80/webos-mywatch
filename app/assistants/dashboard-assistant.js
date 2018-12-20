@@ -17,7 +17,7 @@ DashboardAssistant.prototype.pingWatch = function() {
 	this.controller.serviceRequest("palm://com.palm.applicationManager", {
 		method: "open",
 		parameters: {
-			id: "de.metaviewsoft.mwatch",
+			id: myAppId,
 			params: {command: "PING"}
 		}
 	});
@@ -27,7 +27,7 @@ DashboardAssistant.prototype.relaunchApp = function() {
 	this.controller.serviceRequest("palm://com.palm.applicationManager", {
 		method: "open",
 		parameters: {
-			id: "de.metaviewsoft.mwatch"
+			id: myAppId
 		}
 	});
 };

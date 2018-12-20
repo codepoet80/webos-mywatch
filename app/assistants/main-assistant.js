@@ -235,7 +235,7 @@ MainAssistant.prototype.sendHangup = function() {
 	this.controller.serviceRequest("palm://com.palm.applicationManager", {
 		method: "open",
 		parameters: {
-			id: "de.metaviewsoft.mwatch",
+			id: myAppId,
 			params: {command: "HANGUP"}
 		},
 		onSuccess: function() {},
@@ -247,7 +247,7 @@ MainAssistant.prototype.testRing = function() {
 	this.controller.serviceRequest("palm://com.palm.applicationManager", {
 		method: "open",
 		parameters: {
-			id: "de.metaviewsoft.mwatch",
+			id: myAppId,
 			params: {command: "RING", caller: "Hello", number: "+1-605-475-6968", test: true}
 		},
 		onSuccess: function() {},
@@ -257,10 +257,11 @@ MainAssistant.prototype.testRing = function() {
 };
 
 MainAssistant.prototype.testSms = function() {
+	Mojo.Log.error("Sending SMS request from app id " + myAppId);
 	this.controller.serviceRequest("palm://com.palm.applicationManager", {
 		method: "open",
 		parameters: {
-			id: "de.metaviewsoft.mwatch",
+			id: myAppId,
 			params: {command: "SMS", info: "I've seen things you people wouldn't believe. Attack ships on fire off the shoulder of Orion.", appid: "com.palm.app.messaging", test: true}
 		},
 		onSuccess: function() {},
@@ -272,7 +273,7 @@ MainAssistant.prototype.testEmail = function() {
 	this.controller.serviceRequest("palm://com.palm.applicationManager", {
 		method: "open",
 		parameters: {
-			id: "de.metaviewsoft.mwatch",
+			id: myAppId,
 			params: {command: "INFO", info: "I watched C-beams glitter in the dark near the Tannhauser Gate...", wordwrap: true, appid: "com.palm.app.email", test: true}
 		},
 		onSuccess: function() {},
@@ -284,7 +285,7 @@ MainAssistant.prototype.testMusic = function() {
 	this.controller.serviceRequest("palm://com.palm.applicationManager", {
 		method: "open",
 		parameters: {
-			id: "de.metaviewsoft.mwatch",
+			id: "myAppId",
 			params: {command: "INFO", info: "Test(artist)\n\nTest(tracl)", appid: "com.palm.app.musicplayer", test: true}
 		},
 		onSuccess: function() {},

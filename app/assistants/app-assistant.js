@@ -2,6 +2,7 @@ var gblLaunchParams;
 var gblRelaunched;
 
 var watchType = "Pebble";
+var myAppId;
 
 var gblTimeOutHdl = 0;
 
@@ -339,6 +340,7 @@ var closeWindowTimeout = false;
 AppAssistant.prototype.handleLaunch = function(launchParams) {
 	//clearTimeout(closeWindowTimeout);
 	//closeWindowTimeout = false;
+	myAppId = Mojo.Controller.appInfo.id;
 	gblLaunchParams = launchParams;
 	this.loadCookieValues();
 	this.logInfo('Params: ' + Object.toJSON(launchParams));

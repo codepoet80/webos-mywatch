@@ -250,15 +250,17 @@ BluetoothModel.prototype.hangup = function(watchType, instanceId, targetAddress)
 
 //Pebble Specific
 BluetoothModel.prototype.pebbleRing = function(watchType, instanceId, targetAddress) {
-	Mojo.Log.error("doing pebble ring for " + watchType + " instance: " + instanceId + " target: " + targetAddress);
+	Mojo.Log.error("doing pebble ring for :" + watchType + ", instance: " + instanceId + ", target: " + targetAddress);
 	var data = CreatePebbleRinger();
 	bluetoothModel.write(data, data.length, watchType, instanceId, targetAddress);
-	setTimeout(bluetoothModel.pebbleRingEnd(watchType, instanceId, targetAddress), 10000);
+	setTimeout(function() {
+		bluetoothModel.pebbleRingEnd(watchType, instanceId, targetAddress);
+	}, 10000);
 	this.lastMusicPhoneWrite = (new Date()).getTime();
 };
 
 BluetoothModel.prototype.pebbleRingEnd = function(watchType, instanceId, targetAddress) {
-	Mojo.Log.error("doing pebble ring for " + watchType + " instance: " + instanceId + " target: " + targetAddress);
+	Mojo.Log.error("doing pebble ring END for " + watchType + " instance: " + instanceId + " target: " + targetAddress);
 	var data = CreatePebbleRingEnd();
 	bluetoothModel.write(data, data.length, watchType, instanceId, targetAddress);
 };
@@ -454,7 +456,7 @@ BluetoothModel.prototype.readPortSuccess = function(objData, watchType, instance
 				} else if (data.search(/AT\+CIND\?/) == 0) {
 					reply = "\r\n+CIND: 1,0,0,0,4,0,5,0,0,0\r\n\r\nOK\r\n";
 					notifier("Connected", logger);
-					bluetoothModel.sendInfo("Connected to " + Mojo.Environment.DeviceInfo.modelName, false, "", "", "de.metaviewsoft.mwatch", false, watchType, instanceId, targetAddress)
+					bluetoothModel.sendInfo("Connected to " + Mojo.Environment.DeviceInfo.modelName, false, "", "", myAppId, false, watchType, instanceId, targetAddress)
 				} else if (data.search(/AT\+CMER=/) == 0) {
 					reply = "\r\nOK\r\n";
 				} else if (data.search(/AT\+CCWA=1/) == 0) {

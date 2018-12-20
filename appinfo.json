@@ -1,7 +1,7 @@
 {
-	"id": "de.metaviewsoft.mwatch",
-	"version": "0.10.1",
-	"vendor": "MetaViewSoft",
+	"id": "com.palm.webos.mywatch",
+	"version": "1.0.0",
+	"vendor": "Jonathan Wise",
 	"type": "web",
 	"main": "index.html",
 	"title": "My Watch",

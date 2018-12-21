@@ -212,7 +212,7 @@ BluetoothModel.prototype.sendRing = function(caller, number, watchType, instance
 };
 
 BluetoothModel.prototype.hangup = function(watchType, instanceId, targetAddress) {
-	Mojo.Log.error("Bluetooth model hangup");
+	Mojo.Log.warn("Bluetooth model hangup");
 	if (watchType == "MW150") {
 		var data = "\r\n+CIEV: 4,0\r\n";
 		this.write(data, data.length, watchType, instanceId, targetAddress);
@@ -227,7 +227,7 @@ BluetoothModel.prototype.hangup = function(watchType, instanceId, targetAddress)
 
 //Pebble Specific
 BluetoothModel.prototype.pebbleRing = function(watchType, instanceId, targetAddress) {
-	Mojo.Log.error("doing pebble ring for :" + watchType + ", instance: " + instanceId + ", target: " + targetAddress);
+	Mojo.Log.warn("doing pebble ring for :" + watchType + ", instance: " + instanceId + ", target: " + targetAddress);
 	var data = pebbleHelper.CreatePebbleRinger();
 	bluetoothModel.write(data, data.length, watchType, instanceId, targetAddress);
 	setTimeout(function() {
@@ -237,7 +237,7 @@ BluetoothModel.prototype.pebbleRing = function(watchType, instanceId, targetAddr
 };
 
 BluetoothModel.prototype.pebbleRingEnd = function(watchType, instanceId, targetAddress) {
-	Mojo.Log.error("doing pebble ring END for " + watchType + " instance: " + instanceId + " target: " + targetAddress);
+	Mojo.Log.warn("doing pebble ring END for " + watchType + " instance: " + instanceId + " target: " + targetAddress);
 	var data = pebbleHelper.CreatePebbleRingEnd();
 	bluetoothModel.write(data, data.length, watchType, instanceId, targetAddress);
 };
@@ -311,7 +311,7 @@ BluetoothModel.prototype.writeData = function(watchType, instanceId, targetAddre
 		this.lastWrite = (new Date()).getTime();
 		logger("set lastwrite " + this.lastWrite);
 		if (timeoutValue > 0) {
-			Mojo.Log.error("writeData will timeout in " + timeoutValue + " seconds");
+			Mojo.Log.info("writeData will timeout in " + timeoutValue + " seconds");
             clearTimeout(gblTimeOutHdl);
 			gblTimeOutHdl = setTimeout(bluetoothModel.closeConnection(watchType, instanceId, targetAddress), timeoutValue * 1000);
 		}
@@ -329,7 +329,7 @@ BluetoothModel.prototype.writeData = function(watchType, instanceId, targetAddre
                     var parameters = JSON.parse(options["parameters"]);
                     var instanceId = parameters.instanceId;
                     var targetAddress = parameters.targetAddress;
-                    Mojo.Log.error("instanceid is: " + instanceId);
+                    Mojo.Log.info("instanceid is: " + instanceId);
                     logger("write success with " + JSON.stringify(e) + " and instanceId " + instanceId);
                     this.sendArray.shift();
                     logger("first write is " + this.firstWrite);
@@ -547,7 +547,6 @@ BluetoothModel.prototype.readPortSuccess = function(objData, watchType, instance
 						"," + padString(now.getHours(), 2) + ":" + padString(now.getMinutes(), 2) + ":" + padString(now.getSeconds(), 2) + "+00\"\r\n\r\nOK\r\n";
 				} else if (data.search(/AT\+CHUP/) == 0) {
 					Mojo.Controller.getAppController().showBanner("Hangup", "", "");
-					//TODO: We can use this now!
 					/* This only works if the appid is com.palm.x
 					new Mojo.Service.Request("palm://com.palm.telephony", {
 						method: "hangupAll",
@@ -623,7 +622,6 @@ BluetoothModel.prototype.readPortSuccess = function(objData, watchType, instance
 				} else {
 					reply = "\r\nOK\r\n";
 				}
-				//Mojo.Log.error(reply);
 			} else if (watchType == "Pebble") {
 				if (objData.dataLength > 0) {
 					var length = (data.charCodeAt(0) << 8) | data.charCodeAt(1);
@@ -839,7 +837,6 @@ ConvertString = function(payload) {
 };
 
 Dec2Hex = function(decimal) {
-	//Mojo.Log.error(decimal);
 	var hexChars = "0123456789ABCDEF";
 	var a = decimal % 16;
 	var b = (decimal - a)/16;

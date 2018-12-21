@@ -1,13 +1,18 @@
 var myAppId = "de.metaviewsoft.mwatch";
 var watchType = "Pebble";
+var appModel;
+var bluetoothModel = null;
+var pebbleModel = null;
+var MainStageName = "main";
+var DashboardName = "dashboard";
 var gblLaunchParams;
 var gblRelaunched;
 var gblTimeOutHdl = 0;
+var timeoutValue = 0;
+var lostConnectionValue = 0;
 var valueAll = 0;
 var valueOther = 0;
-var timeoutValue = 0;
 var timeoutMusicPhoneValue = 5 * 60; // hardcoded: 5 min timeout for phone and music messages
-var lostConnectionValue = 0;
 var appIds= {
 	"com.palm.app.phone": {"value":0, "name":"Phone", "icon":"ICON_NOTIFICATION_GENERIC"},
 	"com.palm.app.email": {"value":0, "name":"Email", "icon":"ICON_GENERIC_EMAIL"},
@@ -18,11 +23,6 @@ var appIds= {
 	"luna.battery.alert": {"value":0, "name":"Battery", "icon":"ICON_TIMELINE_CALENDAR"},
 	"com.palm.app.calendar": {"value":0, "name":"Calendar", "icon":"ICON_BLUESCREEN_OF_DEATH"},
 }
-var lastMusicAppId = findAppIdByName("Music");
-var MainStageName = "main";
-var DashboardName = "dashboard";
-var bluetoothModel = null;
-var pebbleModel = null;
 findAppIdByName = function(name)
 {
 	for (var app in appIds) {
@@ -31,9 +31,11 @@ findAppIdByName = function(name)
 	}
 	Mojo.Log.error("App ID couldn't be resolved for the app name " + name);
 }
+var lastMusicAppId = findAppIdByName("Music");
 
 function AppAssistant (appController) {
 	this.appController = appController;
+	appModel = new AppModel();
 	pebbleModel = new PebbleModel();
 	bluetoothModel = new BluetoothModel(this.logInfo, this.showInfo, pebbleModel);
 
@@ -64,8 +66,10 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 	//closeWindowTimeout = false;
 	myAppId = Mojo.Controller.appInfo.id;
 	gblLaunchParams = launchParams;
+	appModel.LoadSettings();
 	this.loadCookieValues();
 	this.logInfo('Params: ' + Object.toJSON(launchParams));
+	this.logInfo('Options: ' + Object.toJSON(appModel.AppSettingsCurrent));
 
 	try {
 		var dashboardFound = false;
@@ -166,15 +170,15 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 					method: 'gettrusteddevices',
 					parameters: {},
 					onSuccess: function (e) {
-						Mojo.Log.error("gettrusteddevices success");
+						Mojo.Log.warn("gettrusteddevices success");
 						for (var i=0; i<e.trusteddevices.length; i++) {
-							Mojo.Log.error(e.trusteddevices[i].name + " " + e.trusteddevices[i].address);
+							Mojo.Log.warn(e.trusteddevices[i].name + " " + e.trusteddevices[i].address);
 							if (e.trusteddevices[i].name.search(/Pebble/i) > -1) {
 								//buttons.push({label: e.trusteddevices[i].name, value: e.trusteddevices[i].address});
-								Mojo.Log.error("** Connecting to " + e.trusteddevices[i].name);
+								Mojo.Log.warn("** Connecting to " + e.trusteddevices[i].name);
 								this.targetAddress = e.trusteddevices[i].address;
 								bluetoothModel.connect(watchType, this.targetAddress);
-								Mojo.Log.error("** Connected to " + e.trusteddevices[i].name);
+								Mojo.Log.warn("** Connected to " + e.trusteddevices[i].name);
 								break;
 							}
 							else
@@ -197,7 +201,7 @@ closeAfterNotification = function()
 {
 	closeWindowTimeout = false;
 	clearTimeout(closeWindowTimeout);
-	Mojo.Log.error("Closing after notification");
+	Mojo.Log.warn("Closing after notification");
 	Mojo.Controller.getAppController().closeAllStages()
 }
 
@@ -377,8 +381,15 @@ AppAssistant.prototype.EvalPixel = function(inputData, index, value, THRESHOLD) 
 	return 0;
 };
 
-AppAssistant.prototype.logInfo = function(logText) {
-	Mojo.Log.error(logText);
+AppAssistant.prototype.logInfo = function(logText, level) {
+	if (level == "info")
+		Mojo.Log.info(logText);
+	else if (level == "warn")
+		Mojo.Log.info(logText);
+	else
+		Mojo.Log.error(logText);
+
+	//Update UI loggers, if present
 	var stageProxy = Mojo.Controller.getAppController().getStageProxy(MainStageName);
 	if (stageProxy) {
 		stageProxy.delegateToSceneAssistant("logInfo", logText, bluetoothModel.getOpen());
@@ -387,10 +398,6 @@ AppAssistant.prototype.logInfo = function(logText) {
 	if (stageProxy) {
 		stageProxy.delegateToSceneAssistant("logInfo", logText, bluetoothModel.getOpen());
 	}
-	//this.logArray.push(encodeURIComponent(logText));
-	//if (this.logArray.length == 1) {
-	//	this.sendLog();
-	//}
 };
 
 AppAssistant.prototype.sendLog = function() {
@@ -427,39 +434,17 @@ AppAssistant.prototype.cleanup = function(event) {
 
 AppAssistant.prototype.loadCookieValues = function()
 {
-	var cookie = new Mojo.Model.Cookie("TIMEOUT");
-	timeoutValue = cookie.get();
-
-	var cookie = new Mojo.Model.Cookie("LOSTCONNECTION");
-	lostConnectionValue = cookie.get();
-
-	var cookie = new Mojo.Model.Cookie("ALL");
-	valueAll = cookie.get();
-	if (!(valueAll >= 0 && valueAll <= 2)) {valueAll = 0;}
-	var cookie = new Mojo.Model.Cookie("OTHER");
-	valueOther = cookie.get();
-	if (!(valueOther >= 0 && valueOther <= 2)) {valueOther = 0;}
-	var cookie = new Mojo.Model.Cookie("PHONE");
-	valuePhone = cookie.get();
-	if (!(valuePhone >= 0 && valuePhone <= 2)) {valuePhone = 0;}
-	var cookie = new Mojo.Model.Cookie("EMAIL");
-	valueEmail = cookie.get();
-	if (!(valueEmail >= 0 && valueEmail <= 2)) {valueEmail = 0;}
-	var cookie = new Mojo.Model.Cookie("MESSAGE");
-	valueMessage = cookie.get();
-	if (!(valueMessage >= 0 && valueMessage <= 2)) {valueMessage = 0;}
-	var cookie = new Mojo.Model.Cookie("MUSICPLAYER");
-	valueMusicPlayer = cookie.get();
-	if (!(valueMusicPlayer >= 0 && valueMusicPlayer <= 2)) {valueMusicPlayer = 0;}
-	var cookie = new Mojo.Model.Cookie("MUSICREMIX");
-	valueMusicRemix = cookie.get();
-	if (!(valueMusicRemix >= 0 && valueMusicRemix <= 2)) {valueMusicRemix = 0;}
-	var cookie = new Mojo.Model.Cookie("MACAW");
-	valueMacaw = cookie.get();
-	if (!(valueMacaw >= 0 && valueMacaw <= 2)) {valueMacaw = 0;}
-	var cookie = new Mojo.Model.Cookie("BATTERY");
-	valueBattery = cookie.get();
-	if (!(valueBattery >= 0 && valueBattery <= 2)) {valueBattery = 0;}
+	for (var key in appModel.AppSettingsCurrent)
+	{
+		var useValue =  appModel.AppSettingsCurrent[key];
+		if (key.indexOf("value") == 0)
+		{
+			if (!(useValue >= 0 && useValue <= 2))
+				useValue = 0;
+		}
+		Mojo.Log.info("setting: " + key + " value: " + useValue);
+		eval(key + "='" + useValue + "'");
+	}
 }
 
 String.prototype.hashCode = function(){

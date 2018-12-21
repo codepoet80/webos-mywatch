@@ -33,7 +33,6 @@ DashboardAssistant.prototype.relaunchApp = function() {
 };
 
 DashboardAssistant.prototype.logInfo = function(logText, open) {
-	//Mojo.Log.error("logInfo", logText);
 	this.controller.get('log-output').innerHTML = "<strong>" + logText + "</strong><br />" + this.controller.get('log-output').innerHTML.substr(0, 300) + "<br /><br />";
 	var signalDiv = this.controller.get('log-signal');
 	if (open) {
@@ -60,7 +59,7 @@ DashboardAssistant.prototype.deactivate = function(event) {
 // Close the dashboard
 DashboardAssistant.prototype.cleanup = function() {
 	var appController = Mojo.Controller.getAppController();
-	appController.closeStage(watchType, "dashboard");
+	appController.closeStage("dashboard");
 	this.controller.stopListening("dashicon", Mojo.Event.tap, this.iconHandler);
 	this.controller.stopListening("dashtext", Mojo.Event.tap, this.textHandler);
 };

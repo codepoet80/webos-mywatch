@@ -12,8 +12,7 @@ var gblRelaunched;
 var gblTimeOutHdl = 0;
 var timeoutValue = 0;
 var lostConnectionValue = 0;
-var lastCommAttemptState = true;
-var checkLastAttemptTimeout = false;
+var closeWindowTimeout = false;
 var valueAll = 0;
 var valueOther = 0;
 var timeoutMusicPhoneValue = 5 * 60; // hardcoded: 5 min timeout for phone and music messages
@@ -41,7 +40,7 @@ function AppAssistant (appController) {
 	this.appController = appController;
 	appModel = new AppModel();
 	pebbleModel = new PebbleModel();
-	bluetoothModel = new BluetoothModel(this.logInfo, this.showInfo, pebbleModel);
+	bluetoothModel = new BluetoothModel(this.logInfo, this.showInfo, pebbleModel, this.lastCommAttemptCallback, this);
 	
 	appModel.LoadSettings();
 	this.loadCookieValues();
@@ -67,8 +66,9 @@ function AppAssistant (appController) {
 
 var closeWindowTimeout = false;
 AppAssistant.prototype.handleLaunch = function(launchParams) {
-	//clearTimeout(closeWindowTimeout);
-	//closeWindowTimeout = false;
+	Mojo.Log.error("***** launch called with: " + JSON.stringify(launchParams) + " ******");
+	clearTimeout(closeWindowTimeout);
+	closeWindowTimeout = false;
 	myAppId = Mojo.Controller.appInfo.id;
 	gblLaunchParams = launchParams;
 	this.logInfo('Params: ' + Object.toJSON(launchParams));
@@ -124,47 +124,6 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 
 AppAssistant.prototype.doEventLaunch = function(launchParams)
 {
-	lastCommAttemptState = true;
-	if (launchParams && (typeof(launchParams) == 'object')) {
-		Mojo.Log.error("***** launch called with: " + JSON.stringify(launchParams) + " ******");
-		if (1 || bluetoothModel.getOpen()) {
-			if (launchParams.command == "SMS") {
-				bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, findAppIdByName("Messaging"), true, watchType, this.instanceId, this.targetAddress);
-			} else if (launchParams.command == "RING") {
-				bluetoothModel.sendRing(launchParams.caller, launchParams.number, watchType, this.instanceId, this.targetAddress);
-			} else if (launchParams.command == "INFO") {
-				bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, launchParams.appid, false, watchType, this.instanceId, this.targetAddress);
-			} else if (launchParams.command == "HANGUP") {
-				bluetoothModel.hangup(watchType, this.instanceId, this.targetAddress);
-			} else if (launchParams.command == "PING") {
-				bluetoothModel.sendPing("", "", watchType, this.instanceId, this.targetAddress);
-			}
-			checkLastAttemptTimeout = setTimeout(this.checkLastCommAttempt(launchParams), 1000);
-		}
-		//If we weren't already running, and this is a notification launch, we should close ourselves after a delay
-		//	So as not to annoy the user
-		if (!gblRelaunched)
-		{
-			clearTimeout(closeWindowTimeout);
-			closeWindowTimeout = false;
-			switch (launchParams.command)
-			{
-				case "RING":
-				{
-					Mojo.Log.warn("****** This is a ring, waiting 12 seconds to close");
-					//closeWindowTimeout = setTimeout("closeAfterNotification()", 12000);
-					break;
-				}
-				default:
-				{
-					Mojo.Log.warn("****** This is another notification, waiting 3 seconds to close");
-					//closeWindowTimeout = setTimeout("closeAfterNotification()", 3500);
-					break;
-				}
-			}
-		}		
-	}
-
 	var now = (new Date()).getTime();
 	// not registered for notification or last notification too long ago
 	if (!this.sppNotificationService) {
@@ -198,14 +157,38 @@ AppAssistant.prototype.doEventLaunch = function(launchParams)
 			this.subscribe();
 		}
 	}
+	this.sendLaunchMessagToWatch();
 }
 
-AppAssistant.prototype.checkLastCommAttempt = function(launchParams)
+AppAssistant.prototype.sendLaunchMessagToWatch = function()
 {
-	if (lastCommAttemptState)
-		this.showInfo(launchParams.command + " message sent!");
+	Mojo.Log.error("*** Now sending message to watch ***");
+	launchParams = gblLaunchParams;
+	if (launchParams && (typeof(launchParams) == 'object')) {
+		if (1 || bluetoothModel.getOpen()) {
+			if (launchParams.command == "SMS") {
+				bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, findAppIdByName("Messaging"), true, watchType, this.instanceId, this.targetAddress);
+			} else if (launchParams.command == "RING") {
+				bluetoothModel.sendRing(launchParams.caller, launchParams.number, watchType, this.instanceId, this.targetAddress);
+			} else if (launchParams.command == "INFO") {
+				bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, launchParams.appid, false, watchType, this.instanceId, this.targetAddress);
+			} else if (launchParams.command == "HANGUP") {
+				bluetoothModel.hangup(watchType, this.instanceId, this.targetAddress);
+			} else if (launchParams.command == "PING") {
+				bluetoothModel.sendPing("", "", watchType, this.instanceId, this.targetAddress);
+			}
+		}	
+	}
+}
+
+AppAssistant.prototype.lastCommAttemptCallback = function(success, notifier, logger)
+{
+	Mojo.Log.error("comms callback called with " + success);
+	if (success)
+		notifier(gblLaunchParams.command + " message sent to " + watchType, logger);
 	else
-		this.showInfo(launchParams.command + " message failed!");
+		notifier(gblLaunchParams.command + " message to " + watchType + " failed", logger);
+	closeWindowTimeout = setTimeout("closeAfterNotification()", 8000);
 }
 
 closeAfterNotification = function()
@@ -213,8 +196,8 @@ closeAfterNotification = function()
 	//TODO: If the main scene doesn't exist, close the dashboard
 	closeWindowTimeout = false;
 	clearTimeout(closeWindowTimeout);
-	Mojo.Log.warn("Closing after notification");
-	Mojo.Controller.getAppController().closeAllStages();
+	var appController = Mojo.Controller.getAppController();
+	appController.closeStage("dashboard");
 }
 
 refreshPatterns = function() {

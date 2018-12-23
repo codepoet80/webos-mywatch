@@ -33,6 +33,15 @@ BluetoothModel.prototype.getOpen = function() {
 	return this.openspp;
 };
 
+BluetoothModel.prototype.btMojoService = function(url, params, cb)
+{
+	return new Mojo.Service.Request(url, {
+		onSuccess: cb,
+		onFailure: cb,
+		parameters: params,
+		}); 
+};
+
 BluetoothModel.prototype.sendPing = function(caller, number, watchType, instanceId, targetAddress) {
 	if ((valueAll < 2) && (valuePhone < 2)) {
 		// RING: just vibrate

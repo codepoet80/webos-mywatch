@@ -8,6 +8,10 @@
         "source": "app/assistants/main-assistant.js"
     },
     {
+        "scenes": "loading",
+        "source": "app/assistants/loading-assistant.js"
+    },
+    {
         "scenes": "whitelist",
         "source": "app/assistants/whitelist-assistant.js"
     },

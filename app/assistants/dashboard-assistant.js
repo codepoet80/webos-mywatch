@@ -32,8 +32,19 @@ DashboardAssistant.prototype.relaunchApp = function() {
 	});
 };
 
+DashboardAssistant.prototype.showInfo = function(logText, open) {
+	this.controller.get('log-output').innerHTML += "<strong>" + logText + "</strong><br />";
+	var signalDiv = this.controller.get('log-signal');
+	if (open) {
+		signalDiv.style.backgroundColor = "green";
+		signalDiv.innerHTML = "<img src='images/watch-ok.png'>";
+	} else {
+		signalDiv.style.backgroundColor = "red";
+		signalDiv.innerHTML = "<img src='images/watch-no.png'>";
+	}
+};
+
 DashboardAssistant.prototype.logInfo = function(logText, open) {
-	this.controller.get('log-output').innerHTML = "<strong>" + logText + "</strong><br />" + this.controller.get('log-output').innerHTML.substr(0, 300) + "<br /><br />";
 	var signalDiv = this.controller.get('log-signal');
 	if (open) {
 		signalDiv.style.backgroundColor = "green";
@@ -50,6 +61,7 @@ DashboardAssistant.prototype.considerForNotification = function(event) {
 
 DashboardAssistant.prototype.activate = function(event) {
 	Mojo.Log.error("dashboard activate");
+	this.logInfo(null, lastLoggingConnectionStatus);
 };
 
 DashboardAssistant.prototype.deactivate = function(event) {

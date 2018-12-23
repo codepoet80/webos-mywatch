@@ -124,6 +124,7 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 
 AppAssistant.prototype.doEventLaunch = function(launchParams)
 {
+	lastCommAttemptState = true;
 	if (launchParams && (typeof(launchParams) == 'object')) {
 		Mojo.Log.error("***** launch called with: " + JSON.stringify(launchParams) + " ******");
 		if (1 || bluetoothModel.getOpen()) {
@@ -209,10 +210,11 @@ AppAssistant.prototype.checkLastCommAttempt = function(launchParams)
 
 closeAfterNotification = function()
 {
+	//TODO: If the main scene doesn't exist, close the dashboard
 	closeWindowTimeout = false;
 	clearTimeout(closeWindowTimeout);
 	Mojo.Log.warn("Closing after notification");
-	Mojo.Controller.getAppController().closeAllStages()
+	Mojo.Controller.getAppController().closeAllStages();
 }
 
 refreshPatterns = function() {

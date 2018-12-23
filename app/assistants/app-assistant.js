@@ -37,6 +37,7 @@ findAppIdByName = function(name)
 var lastMusicAppId = findAppIdByName("Music");
 
 function AppAssistant (appController) {
+	Mojo.Log.error("Creating app assistant");
 	this.appController = appController;
 	appModel = new AppModel();
 	pebbleModel = new PebbleModel();
@@ -98,7 +99,7 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 		// If the stage exists, just bring it to the front by focusing its window.
 		// Or, if it is just the proxy, then it is being focused, so exit.
 		if (stageController) {
-			//stageController.window.focus();
+			stageController.window.focus();
 		}
 		this.doEventLaunch(launchParams);
 		if (!(gblLaunchParams.dockMode || gblLaunchParams.touchstoneMode)) {
@@ -124,7 +125,6 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 
 AppAssistant.prototype.doEventLaunch = function(launchParams)
 {
-	var now = (new Date()).getTime();
 	// not registered for notification or last notification too long ago
 	if (!this.sppNotificationService) {
 		if (watchType == "MW150") {
@@ -136,95 +136,27 @@ AppAssistant.prototype.doEventLaunch = function(launchParams)
 				method: 'gettrusteddevices',
 				parameters: {},
 				onSuccess: function (e) {
-					//Mojo.Log.warn("Successful trusted devices query.");
+					this.logInfo("Successful trusted devices query: " + JSON.stringify(e));
 					for (var i=0; i<e.trusteddevices.length; i++) {
-						//Mojo.Log.warn(e.trusteddevices[i].name + " " + e.trusteddevices[i].address);
 						if (e.trusteddevices[i].name.search(/Pebble/i) > -1) {
-							//Mojo.Log.warn("Connecting to trusted device: " + e.trusteddevices[i].name);
+							this.logInfo("Connecting to trusted device: " + e.trusteddevices[i].name);
 							this.targetAddress = e.trusteddevices[i].address;
 							bluetoothModel.connect(watchType, this.targetAddress, this.subscribe());
 							break;
 						}
 						else
-							Mojo.Log.error("Can't find a pebble");
+						this.logInfo("Can't find a pebble", "error");
 					}
 				}.bind(this),
 				onFailure: function (e) {Mojo.Log.error("Failure to query trusted devices: "+JSON.stringify(e));}.bind(this)
 			});
-			//Mojo.Log.warn("Subscribing to " + watchType);
 			
 		} else if (watchType == "LiveView") {
 			this.subscribe();
 		}
 	}
-	this.sendLaunchMessagToWatch();
+	this.sendLaunchMessageToWatch();
 }
-
-AppAssistant.prototype.sendLaunchMessagToWatch = function()
-{
-	Mojo.Log.error("*** Now sending message to watch ***");
-	launchParams = gblLaunchParams;
-	if (launchParams && (typeof(launchParams) == 'object')) {
-		if (1 || bluetoothModel.getOpen()) {
-			if (launchParams.command == "SMS") {
-				bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, findAppIdByName("Messaging"), true, watchType, this.instanceId, this.targetAddress);
-			} else if (launchParams.command == "RING") {
-				bluetoothModel.sendRing(launchParams.caller, launchParams.number, watchType, this.instanceId, this.targetAddress);
-			} else if (launchParams.command == "INFO") {
-				bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, launchParams.appid, false, watchType, this.instanceId, this.targetAddress);
-			} else if (launchParams.command == "HANGUP") {
-				bluetoothModel.hangup(watchType, this.instanceId, this.targetAddress);
-			} else if (launchParams.command == "PING") {
-				bluetoothModel.sendPing("", "", watchType, this.instanceId, this.targetAddress);
-			}
-		}	
-	}
-}
-
-AppAssistant.prototype.lastCommAttemptCallback = function(success, notifier, logger)
-{
-	Mojo.Log.error("comms callback called with " + success);
-	if (success)
-		notifier(gblLaunchParams.command + " message sent to " + watchType, logger);
-	else
-		notifier(gblLaunchParams.command + " message to " + watchType + " failed", logger);
-	closeWindowTimeout = setTimeout("closeAfterNotification()", 8000);
-}
-
-closeAfterNotification = function()
-{
-	//TODO: If the main scene doesn't exist, close the dashboard
-	closeWindowTimeout = false;
-	clearTimeout(closeWindowTimeout);
-	var appController = Mojo.Controller.getAppController();
-	appController.closeStage("dashboard");
-}
-
-refreshPatterns = function() {
-	pattern = [];
-	patternDB.transaction(function (tx) {
-		tx.executeSql("SELECT pattern FROM WhiteList; GO;", [],
-			function(tx, result) {
-				if (result.rows) {
-					for (var i=0; i<result.rows.length; i++) {
-						var row = result.rows.item(i);
-						pattern.push(row.pattern);
-					}
-				}
-			}.bind(this),
-			function(tx, error) {}
-		);
-	}.bind(this));
-};
-
-AppAssistant.prototype.timerHandler = function() {
-	bluetoothModel.read(watchType, this.instanceId, this.targetAddress);
-	//gblUpdateID = setTimeout(this.timerHandler.bind(this), 5000);
-};
-
-AppAssistant.prototype.getOpen = function() {
-	return bluetoothModel.getOpen();
-};
 
 AppAssistant.prototype.subscribe = function() {
 	if (this.sppNotificationService == null)
@@ -243,55 +175,14 @@ AppAssistant.prototype.subscribe = function() {
 	}
 	else
 	{
-		this.logInfo("Not re-subscribing to notifications. Handler already subscribed.", "warn");
-	}
-};
-
-AppAssistant.prototype.enableserver = function(enable) {
-	if (enable) {
-		if (!this.ServerEnabled && !this.InEnableServer) {
-			this.InEnableServer = true;
-			this.logInfo("enabling server " + this.InEnableServer);
-			new Mojo.Service.Request(this.urlspp, {
-				method: 'enableserver',
-				parameters: {"servicename": "SPP slave"},
-				onSuccess: function (e) {
-					this.InEnableServer = false;
-					this.ServerEnabled = true;
-					this.logInfo("Enableserver success");
-				}.bind(this),
-				onFailure: function (e) {
-					this.InEnableServer = false;
-					this.ServerEnabled = false;
-					this.logInfo("Enableserver failure " + Object.toJSON(e));
-				}.bind(this)
-			});
-		}
-	} else {
-		if (this.ServerEnabled) {
-			this.logInfo("disabling server");
-			new Mojo.Service.Request(this.urlspp, {
-				method: 'disableserver',
-				parameters: {"servicename": "SPP slave"},
-				onSuccess: function (e) {
-					this.ServerEnabled = false;
-					this.logInfo("Disableserver success");
-				}.bind(this),
-				onFailure: function (e) {
-					this.ServerEnabled = true;
-					this.logInfo("Disableserver failure " + Object.toJSON(e));
-				}.bind(this)
-			});
-		}
+		this.logInfo("Not re-subscribing to notifications. Handler already subscribed.", "error");
 	}
 };
 
 //Notification handler for SPP events.
 AppAssistant.prototype.sppNotify = function(objData)
 {
-	var that = this; // for scoping
-
-	this.logInfo("SPP Notify started for " + watchType + " " + Object.toJSON(objData));
+	this.logInfo("SPP Notification for " + watchType + " " + Object.toJSON(objData));
 	this.lastNotify = (new Date()).getTime();
 	if (!objData.notification) {
 		if (valueAll == 2) {
@@ -308,6 +199,7 @@ AppAssistant.prototype.sppNotify = function(objData)
 
 	timeoutValue = appModel.AppSettingsCurrent["timeoutValue"];
 	lostConnectionValue = appModel.AppSettingsCurrent["lostConnectionValue"];
+	appModel.AppSettingsCurrent["sppState"] = objData.notification;
 
 	switch(objData.notification)
 	{
@@ -371,6 +263,179 @@ AppAssistant.prototype.sppNotify = function(objData)
 	}
 };
 
+
+var sendAttempts = 0;
+var sendRetryTimeout = false;
+AppAssistant.prototype.sendLaunchMessageToWatch = function()
+{
+	launchParams = gblLaunchParams;
+	clearTimeout(sendRetryTimeout);
+	sendRetryTimeout = false;
+	if (launchParams && (typeof(launchParams) == 'object')) {
+		this.logInfo("We have a message to send to the watch, checking for connection.");
+		if (this.getOpen())
+		{
+;			this.logInfo("SPP connection reports ready. Sending message to watch.");
+			if (launchParams.command == "SMS") {
+				bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, findAppIdByName("Messaging"), true, watchType, this.instanceId, this.targetAddress);
+			} else if (launchParams.command == "RING") {
+				bluetoothModel.sendRing(launchParams.caller, launchParams.number, watchType, this.instanceId, this.targetAddress);
+			} else if (launchParams.command == "INFO") {
+				bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, launchParams.appid, false, watchType, this.instanceId, this.targetAddress);
+			} else if (launchParams.command == "HANGUP") {
+				bluetoothModel.hangup(watchType, this.instanceId, this.targetAddress);
+			} else if (launchParams.command == "PING") {
+				bluetoothModel.sendPing("", "", watchType, this.instanceId, this.targetAddress);
+			}
+			checkMessageSentTimeout = setTimeout(this.checkMessageSentToWatch.bind(this), 2000);
+		}
+		else
+		{
+			sendAttempts++;
+			sppState = appModel.AppSettingsCurrent["sppState"];
+			this.logInfo("SPP not ready for messages. State is: " + sppState + ".");
+			if (sendAttempts == 25)
+			{
+				if (sppState == "notifndisconnected" || sppState == "notifnconnected")
+				{
+					this.logInfo("Trying to restart sending procedure.");
+					appModel.AppSettingsCurrent["sppState"] = "notyetconnected";
+					this.cleanup();
+					setTimeout(this.relaunchApp.bind(this), 3000);
+					return;
+				}
+			}
+			else if (sendAttempts > 55)
+			{
+				this.logInfo("Nothing left to try. Unable to send message.");
+				sendAttempts = 0;
+				this.cleanup();
+				this.checkMessageSentToWatch();
+			}
+			else
+			{
+				this.logInfo("Waiting to re-try (" + sendAttempts + ").")
+				sendRetryTimeout = setTimeout(this.sendLaunchMessageToWatch.bind(this), 3000);
+			}
+		}
+	}
+	else
+	{
+		this.logInfo("No message found to send to watch.");
+	}
+	
+}
+
+var lastMessageSentStatus = false;
+var checkMessageSentTimeout = false;
+AppAssistant.prototype.checkMessageSentToWatch = function()
+{
+	clearTimeout(checkMessageSentTimeout);
+	checkMessageSentTimeout = false;
+	this.logInfo("Checking to see if last message sent successfully. Open is: " + this.getOpen() + ", last status is: " + bluetoothModel.getLastCommStatus());
+	if (this.getOpen() && bluetoothModel.getLastCommStatus())
+	{
+		this.showInfo(gblLaunchParams.command + " message sent to " + watchType, logger);
+		var stageProxy = this.controller.getStageProxy(MainStageName);
+		if (!stageProxy)
+		{
+			this.logInfo("Main window not found. Shutting down after successful notification in 8 seconds.");
+			closeWindowTimeout = setTimeout(this.closeAfterNotification.bind(this), 8000);
+		}
+		else
+			this.logInfo("Main window was found. NOT shutting down after successful notification.");
+	}
+	else
+	{
+		this.logInfo("NOT shutting down after failed notificiation.");
+		this.showInfo(gblLaunchParams.command + " message to " + watchType + " failed", logger);
+	}
+}
+
+AppAssistant.prototype.closeAfterNotification = function()
+{
+	//TODO: If the main scene doesn't exist, close the dashboard
+	closeWindowTimeout = false;
+	clearTimeout(closeWindowTimeout);
+	var appController = Mojo.Controller.getAppController();
+	appController.closeStage("dashboard");
+}
+
+AppAssistant.prototype.relaunchApp = function() {
+	new Mojo.Service.Request("palm://com.palm.applicationManager", {
+		method: "open",
+		parameters: {
+			id: myAppId,
+			params: gblLaunchParams
+		}
+	});
+};
+
+refreshPatterns = function() {
+	pattern = [];
+	patternDB.transaction(function (tx) {
+		tx.executeSql("SELECT pattern FROM WhiteList; GO;", [],
+			function(tx, result) {
+				if (result.rows) {
+					for (var i=0; i<result.rows.length; i++) {
+						var row = result.rows.item(i);
+						pattern.push(row.pattern);
+					}
+				}
+			}.bind(this),
+			function(tx, error) {}
+		);
+	}.bind(this));
+};
+
+AppAssistant.prototype.timerHandler = function() {
+	bluetoothModel.read(watchType, this.instanceId, this.targetAddress);
+	//gblUpdateID = setTimeout(this.timerHandler.bind(this), 5000);
+};
+
+AppAssistant.prototype.getOpen = function() {
+	return bluetoothModel.getOpen();
+};
+
+AppAssistant.prototype.enableserver = function(enable) {
+	if (enable) {
+		if (!this.ServerEnabled && !this.InEnableServer) {
+			this.InEnableServer = true;
+			this.logInfo("enabling server " + this.InEnableServer);
+			new Mojo.Service.Request(this.urlspp, {
+				method: 'enableserver',
+				parameters: {"servicename": "SPP slave"},
+				onSuccess: function (e) {
+					this.InEnableServer = false;
+					this.ServerEnabled = true;
+					this.logInfo("Enableserver success");
+				}.bind(this),
+				onFailure: function (e) {
+					this.InEnableServer = false;
+					this.ServerEnabled = false;
+					this.logInfo("Enableserver failure " + Object.toJSON(e));
+				}.bind(this)
+			});
+		}
+	} else {
+		if (this.ServerEnabled) {
+			this.logInfo("disabling server");
+			new Mojo.Service.Request(this.urlspp, {
+				method: 'disableserver',
+				parameters: {"servicename": "SPP slave"},
+				onSuccess: function (e) {
+					this.ServerEnabled = false;
+					this.logInfo("Disableserver success");
+				}.bind(this),
+				onFailure: function (e) {
+					this.ServerEnabled = true;
+					this.logInfo("Disableserver failure " + Object.toJSON(e));
+				}.bind(this)
+			});
+		}
+	}
+};
+
 AppAssistant.prototype.playAlarm = function(cnt) {
 	Mojo.Controller.getAppController().playSoundNotification("vibrate", "");
 	if (cnt < 5) {
@@ -428,18 +493,10 @@ AppAssistant.prototype.showInfo = function(logText, logger) {
 };
 
 AppAssistant.prototype.cleanup = function(event) {
+	appModel.SaveSettings();
+	this.sppNotificationService = null
 	bluetoothModel.close(watchType, this.instanceId, this.targetAddress);
-	//this.enableserver(false);
-
-	new Mojo.Service.Request("palm://com.palm.power/com/palm/power", {
-		method: "activityEnd",
-		parameters: {
-			id: Mojo.appInfo.id + "-1"
-		},
-		onSuccess: function() {},
-		onFailure: function() {}
-	});
-
+	Mojo.Log.error ("Cleaned up Bluetooth connections");
 };
 
 AppAssistant.prototype.loadCookieValues = function()

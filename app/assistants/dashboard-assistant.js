@@ -33,7 +33,7 @@ DashboardAssistant.prototype.relaunchApp = function() {
 };
 
 DashboardAssistant.prototype.showInfo = function(logText, open) {
-	this.controller.get('log-output').innerHTML += "<strong>" + logText + "</strong><br />";
+	this.controller.get('log-output').innerHTML = "<strong>" + logText + "</strong><br />" + this.controller.get('log-output').innerHTML.substr(0, 300) + "<br /><br />";
 	var signalDiv = this.controller.get('log-signal');
 	if (open) {
 		signalDiv.style.backgroundColor = "green";

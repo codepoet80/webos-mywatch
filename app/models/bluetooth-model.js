@@ -1,13 +1,11 @@
 var logger;
 var notifier;
-var callbackComplete;
 var pebbleHelper;
 
-var BluetoothModel = function(logHandler, userNotifier, pebbleModel, completeCallback) { 
+var BluetoothModel = function(logHandler, userNotifier, pebbleModel) { 
     logger = logHandler;
 	notifier = userNotifier;
 	pebbleHelper = pebbleModel;
-	callbackComplete = completeCallback;
 	
     this.openspp = false;
     this.initOpen = true;
@@ -18,6 +16,7 @@ var BluetoothModel = function(logHandler, userNotifier, pebbleModel, completeCal
     this.firstWrite = true;
 	this.lastWrite = 0;
 	this.lastConnect = 0;
+	this.lastCommAttemptSuccess = true;
 	this.InRead = false;
 	this.version = 0;
     this.urlgap     = 'palm://com.palm.bluetooth/gap';
@@ -35,6 +34,11 @@ BluetoothModel.prototype.getOpen = function() {
 	return this.openspp;
 };
 
+BluetoothModel.prototype.getLastCommStatus = function ()
+{
+	return this.lastCommAttemptSuccess;
+}
+
 BluetoothModel.prototype.btMojoService = function(url, params, cb)
 {
 	return new Mojo.Service.Request(url, {
@@ -45,6 +49,7 @@ BluetoothModel.prototype.btMojoService = function(url, params, cb)
 };
 
 BluetoothModel.prototype.sendPing = function(caller, number, watchType, instanceId, targetAddress) {
+	lastCommAttemptSuccess = true;
 	if ((valueAll < 2) && (valuePhone < 2)) {
 		// RING: just vibrate
 		caller = caller ? caller.replace(/\"/g, "'") : "";
@@ -77,6 +82,7 @@ BluetoothModel.prototype.sendInfo = function(info, wordwrap, icon, reason, appid
 	var value = valueOther;
 	var from = "Unknown";
 	var music = false;
+	lastCommAttemptSuccess = true;
 
 	//Determine if a Message is actually an Email
 	var findLB = info.indexOf("\n");
@@ -131,6 +137,7 @@ BluetoothModel.prototype.sendInfo = function(info, wordwrap, icon, reason, appid
 
 BluetoothModel.prototype.sendText = function(watchType, instanceId, targetAddress) {
 	logger("sendText " + this.entries.length, "info");
+	lastCommAttemptSuccess = true;
 
 	if (this.entries.length > 0) {
 		this.toSendEntry = this.entries.shift();
@@ -180,10 +187,6 @@ BluetoothModel.prototype.sendText = function(watchType, instanceId, targetAddres
 			if (this.entries.length > 0) {
 				setTimeout(bluetoothModel.sendText(watchType, instanceId, targetAddress), 5 * 1000);
 			}
-			else
-			{
-				callbackComplete(true, notifier, logger);
-			}
 		} else if (watchType == "LiveView") {
 		}
 	}
@@ -192,6 +195,7 @@ BluetoothModel.prototype.sendText = function(watchType, instanceId, targetAddres
 BluetoothModel.prototype.sendRing = function(caller, number, watchType, instanceId, targetAddress) {
 
 	if ((valueAll < 2) && (valuePhone < 2)) {
+		lastCommAttemptSuccess = true;
 		// RING: just vibrate
 		caller = caller ? caller.replace(/\"/g, "'") : "";
 		number = number ? number.replace(/\"/g, "'") : "";
@@ -205,7 +209,6 @@ BluetoothModel.prototype.sendRing = function(caller, number, watchType, instance
 				var data = "\r\nRING\r\n";
 				this.write(data, data.length, watchType, instanceId, targetAddress);
 			}
-			callbackComplete(true, notifier, logger);
 		} else if (watchType == "Pebble") {
 			var data = pebbleHelper.CreatePebblePhoneinfo(caller, number);
 			this.write(data, data.length, watchType, instanceId, targetAddress);
@@ -223,7 +226,6 @@ BluetoothModel.prototype.sendRing = function(caller, number, watchType, instance
 			// vibrate
 			reply = [MSG_SETVIBRATE, 0x04, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x02, 0x00];
 			this.write(reply, reply.length, watchType, instanceId, targetAddress);
-			callbackComplete(true, notifier, logger);
 		}
 	}
 };
@@ -257,7 +259,7 @@ BluetoothModel.prototype.pebbleRingEnd = function(watchType, instanceId, targetA
 	Mojo.Log.warn("doing pebble ring END for " + watchType + " instance: " + instanceId + " target: " + targetAddress);
 	var data = pebbleHelper.CreatePebbleRingEnd();
 	bluetoothModel.write(data, data.length, watchType, instanceId, targetAddress);
-	callbackComplete(true, notifier, logger);
+	lastCommAttemptSuccess = true;
 };
 
 //Primitives
@@ -305,7 +307,7 @@ BluetoothModel.prototype.open = function(urlService, watchType, instanceId, targ
 				}
 			}.bind(this),
 			onFailure: function (e) {
-				logger("Open failure " + e.errorText);
+				logger("Open failure " + JSON.stringify(e));
 			}.bind(this)
 		});
 	}
@@ -330,9 +332,9 @@ BluetoothModel.prototype.writeData = function(watchType, instanceId, targetAddre
 	{
 		logger("SPP is Open, writing data: " + this.sendArray.length + " id " + instanceId);
 		this.lastWrite = (new Date()).getTime();
-		logger("Set lastwrite " + this.lastWrite);
+		logger("Last write happened at: " + this.lastWrite, "info");
 		if (timeoutValue > 0) {
-			Mojo.Log.info("WriteData will timeout in " + timeoutValue + " seconds");
+			Mojo.Log.info("WriteData will timeout in " + timeoutValue + " seconds", "warn");
             clearTimeout(gblTimeOutHdl);
 			gblTimeOutHdl = setTimeout(bluetoothModel.closeConnection(watchType, instanceId, targetAddress), timeoutValue * 1000);
 		}
@@ -363,6 +365,7 @@ BluetoothModel.prototype.writeData = function(watchType, instanceId, targetAddre
                         logger("Reading data for instance: " + instanceId, "info");
 						this.read(watchType, instanceId, targetAddress);
 					}
+					lastCommAttemptSuccess = true;
 				}.bind(this),
 				onFailure: function (e, options) {
                     logger("Failure! Options were: " + JSON.stringify(options))
@@ -379,6 +382,7 @@ BluetoothModel.prototype.writeData = function(watchType, instanceId, targetAddre
                         logger("Did not close instanceId: " + instanceId), "warn";
 						this.read(watchType, instanceId, targetAddress);
 					}
+					lastCommAttemptSuccess = false;
 				}.bind(this)
 			});
 		} else {
@@ -397,39 +401,20 @@ BluetoothModel.prototype.read = function(watchType, instanceId, targetAddress) {
                 "targetAddress": targetAddress,
 				"dataLength": 256
 			},
-			onSuccess: function (e, options) {
-                var parameters = JSON.parse(options["parameters"]);
-                var instanceId = parameters.instanceId;
-				var targetAddress = parameters.targetAddress;
-                logger("Read success for instance " + instanceId + ": " + Object.toJSON(e), "info");
-                bluetoothModel.readPortSuccess(e, watchType, instanceId, targetAddress)
-            },
-			onFailure: function (e) {
-				this.InRead = false;
-				if (watchType != "Pebble") {
-					notifier("Read failure. " + Object.toJSON(e), logger);
+				onSuccess: function (e, options) {
+					var parameters = JSON.parse(options["parameters"]);
+					var instanceId = parameters.instanceId;
+					var targetAddress = parameters.targetAddress;
+					logger("Read success for instance " + instanceId + ": " + Object.toJSON(e), "info");
+					lastCommAttemptSuccess = true;
+					bluetoothModel.readPortSuccess(e, watchType, instanceId, targetAddress);
+				},
+				onFailure: function (e) {
+					this.InRead = false;
+					if (watchType != "Pebble") {
+						notifier("Read failure. " + Object.toJSON(e), logger);
+						lastCommAttemptSuccess = false;
 				}
-				/*
-				if (watchType == "Pebble") {
-					if (this.openspp) {
-						this.close();
-						setTimeout(this.open.bind(this), 10000);
-					} else {
-						logger("open4");
-						this.open();
-					}
-				}
-				*/
-				// stop polling read
-				//setTimeout(this.read.bind(this), 10000);
-				/*
-				//TODO: If this is used the timeout handler needs to pass watchType, instance, and target
-				if (this.sendArray.length > 0) {
-					this.writeData();
-				} else {
-					setTimeout(this.writeData.bind(this), 1000);
-				}
-				*/
 			}.bind(this)
 		});
 	}
@@ -652,7 +637,7 @@ BluetoothModel.prototype.readPortSuccess = function(objData, watchType, instance
 							name = cmd;
 						}
 					}
-					logger("read id: " + id + " name: " + name + " len: " + length);
+					logger("read id: " + id + " name: " + name + " len: " + length, "info");
 					if (id == pebbleHelper.PebbleCommands["PEBBLE_PHONE_VERSION"]) {
 						//                                                       |        -1            |      session          | android, telephony, sms | response version
 						//reply = pebbleHelper.CreatePebbleMsg(pebbleHelper.PebbleCommands["PEBBLE_PHONE_VERSION"], [0x01, 0xff, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x32, 0x02, 0x02, 0x00, 0x00]);
@@ -743,7 +728,7 @@ BluetoothModel.prototype.readPortSuccess = function(objData, watchType, instance
 				// deal with LiveView: send MSG_ACK
 				if (objData.dataLength > 0) {
 					var id = data.charCodeAt(0);
-					logger("read id: " + id);
+					logger("read id: " + id, "info");
 					reply = [MSG_ACK, 0x04, 0x00, 0x00, 0x00, 0x01, id];
 					if (id == MSG_GETCAPS_RESP) {
 						this.write(reply, reply.length, watchType, instanceId, targetAddress);

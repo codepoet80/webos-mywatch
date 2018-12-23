@@ -22,6 +22,7 @@ var AppModel = function()
 		timeoutValue: 0,
 		lostConnectionValue: 0,
 		showLogging: false,
+		sppState: "notyetconnected",
 		valueAll: 0,
 		valueOther: 0,
 		valuePhone: 0,

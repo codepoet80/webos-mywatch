@@ -227,7 +227,7 @@ AppAssistant.prototype.sppNotify = function(objData)
 			}
 			this.showInfo("Connected to " + watchType);
 			this.instanceId = objData.instanceId;
-			bluetoothModel.open(this.urlservice, watchType, this.instanceId, this. targetAddress);
+			bluetoothModel.open(this.urlservice, watchType, this.instanceId, this.targetAddress);
 			break;
 
 		case "notifndisconnected":

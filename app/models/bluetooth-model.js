@@ -75,6 +75,7 @@ BluetoothModel.prototype.sendInfo = function(info, wordwrap, icon, reason, appid
 	var value = valueOther;
 	var from = "Unknown";
 	var music = false;
+	lastCommAttemptState = true;
 
 	//Determine if a Message is actually an Email
 	var findLB = info.indexOf("\n");
@@ -82,10 +83,10 @@ BluetoothModel.prototype.sendInfo = function(info, wordwrap, icon, reason, appid
 	if (findLB > -1 && findAt > findLB)
 		appid = appIds["appidEmail"].id;
 
-	logger("sendInfo app id now: " + appid);
+	logger("Sending appid now: " + appid), "info";
 	value = appIds[appid].value;
 	from = appIds[appid].name;
-    logger("sendInfo value " + value + " from: " + from);
+    logger("Sending info, value " + value + " from: " + from), "info";
 
 	var accepted = false;
 	if ((appid != findAppIdByName("Messaging")) || (pattern.length == 0) || info.test) {
@@ -99,9 +100,7 @@ BluetoothModel.prototype.sendInfo = function(info, wordwrap, icon, reason, appid
 			}
 		}
     }
-    
-    logger("sendInfo accepted " + accepted);
-
+    logger("sendInfo accepted " + accepted, "info");
 	if (accepted) {
 		if ((valueAll < 2) && (value < 2)) {
 			// remember what to display, then we don't need to extract it later
@@ -118,19 +117,21 @@ BluetoothModel.prototype.sendInfo = function(info, wordwrap, icon, reason, appid
 				value: value,
 				music: music};
 			this.entries.push(entry);
-			logger("send info entry: " + JSON.stringify(entry));
+			logger("Send info entry: " + JSON.stringify(entry), "error");
 			if (((new Date()).getTime() - this.toSendTime) > (10 * 1000)) {
-				logger("sending text to " + instanceId, targetAddress);
+				logger("Sending text to instance " + instanceId + ", address: " + targetAddress, "warn");
 				this.sendText(watchType, instanceId, targetAddress);
 			}
 			else
-				logger("not sending because of time check");
+				logger("Not sending info because of time check", "error");
 		}
 	}
 };
 
 BluetoothModel.prototype.sendText = function(watchType, instanceId, targetAddress) {
-	logger("sendText " + this.entries.length);
+	lastCommAttemptState = true;
+	logger("sendText " + this.entries.length, "info");
+
 	if (this.entries.length > 0) {
 		this.toSendEntry = this.entries.shift();
 		this.toSendTime = (new Date()).getTime();
@@ -185,6 +186,8 @@ BluetoothModel.prototype.sendText = function(watchType, instanceId, targetAddres
 }
 
 BluetoothModel.prototype.sendRing = function(caller, number, watchType, instanceId, targetAddress) {
+	lastCommAttemptState = true;
+
 	if ((valueAll < 2) && (valuePhone < 2)) {
 		// RING: just vibrate
 		caller = caller ? caller.replace(/\"/g, "'") : "";
@@ -252,16 +255,17 @@ BluetoothModel.prototype.pebbleRingEnd = function(watchType, instanceId, targetA
 };
 
 //Primitives
-BluetoothModel.prototype.connect = function(watchType, targetAddress) {
+BluetoothModel.prototype.connect = function(watchType, targetAddress, callBack) {
 	this.lastConnect = (new Date()).getTime();
 	this.connectBTDevice = new Mojo.Service.Request(this.urlspp, {
 		method: 'connect',
 		parameters: { "address": targetAddress },
 		onSuccess: function (e) {
-			logger("connect success, results="+JSON.stringify(e));
+			logger("Connect success, results: "+JSON.stringify(e));
+			callBack();
 		}.bind(this),
 		onFailure: function (e){
-			logger("connect failure, results="+JSON.stringify(e));
+			logger("Connect failure, results: "+JSON.stringify(e));
 		}.bind(this)
 	});
 };
@@ -294,7 +298,7 @@ BluetoothModel.prototype.open = function(urlService, watchType, instanceId, targ
 				}
 			}.bind(this),
 			onFailure: function (e) {
-				logger("Open failure " + Object.toJSON(e) + ": " + JSON.stringify(e.exception));
+				logger("Open failure " + e.errorText);
 			}.bind(this)
 		});
 	}
@@ -302,31 +306,32 @@ BluetoothModel.prototype.open = function(urlService, watchType, instanceId, targ
 
 BluetoothModel.prototype.write = function(data, length, watchType, instanceId, targetAddress) {
 	var now = (new Date()).getTime();
-	logger("write " + this.sendArray.length + " for instance: " + instanceId + " target: " + targetAddress + " (now - this.lastWrite) " + (now - this.lastWrite));
+	logger("write " + this.sendArray.length + " for instance: " + instanceId + " target: " + targetAddress + " (now - this.lastWrite) " + (now - this.lastWrite), "info");
 	this.sendArray.push({data: data, length: length});
 	if ((this.sendArray.length == 1) || ((now - this.lastWrite) >= 5000)) {
 		this.writeData(watchType, instanceId, targetAddress);
 	}
-	logger("write initOpen:" + this.initOpen + " openspp:" + this.openspp + " (now - this.lastConnect) " + (now - this.lastConnect));
+	logger("write initOpen:" + this.initOpen + " openspp:" + this.openspp + " (now - this.lastConnect) " + (now - this.lastConnect), "info");
 	if (!this.initOpen && !this.openspp/* && ((now - this.lastConnect) >= 5000)*/) {
-		logger("connect2");
+		logger("Opening connection to write", "warn");
 		this.connect(watchType, targetAddress);
 	}
 };
 
 BluetoothModel.prototype.writeData = function(watchType, instanceId, targetAddress) {
-	if (this.openspp) {
+	if (this.openspp) 
+	{
 		logger("SPP is Open, writing data: " + this.sendArray.length + " id " + instanceId);
 		this.lastWrite = (new Date()).getTime();
-		logger("set lastwrite " + this.lastWrite);
+		logger("Set lastwrite " + this.lastWrite);
 		if (timeoutValue > 0) {
-			Mojo.Log.info("writeData will timeout in " + timeoutValue + " seconds");
+			Mojo.Log.info("WriteData will timeout in " + timeoutValue + " seconds");
             clearTimeout(gblTimeOutHdl);
 			gblTimeOutHdl = setTimeout(bluetoothModel.closeConnection(watchType, instanceId, targetAddress), timeoutValue * 1000);
 		}
 		if (this.sendArray.length > 0) {
 			var value = this.sendArray[0];
-			logger("writeData using " + Object.toJSON(value));
+			logger("WriteData using " + Object.toJSON(value), "info");
 			this.writeRequest = new Mojo.Service.Request(this.urlservice, {
 				method: 'write',
 				parameters: {
@@ -338,34 +343,35 @@ BluetoothModel.prototype.writeData = function(watchType, instanceId, targetAddre
                     var parameters = JSON.parse(options["parameters"]);
                     var instanceId = parameters.instanceId;
                     var targetAddress = parameters.targetAddress;
-                    Mojo.Log.info("instanceid is: " + instanceId);
-                    logger("write success with " + JSON.stringify(e) + " and instanceId " + instanceId);
+					logger("Write success for instance " + instanceId + ": " + Object.toJSON(e), "info");
+					lastCommAttemptState = true;
                     this.sendArray.shift();
-                    logger("first write is " + this.firstWrite);
+                    logger("First write is " + this.firstWrite, "info");
 					if (this.firstWrite) {
 						this.firstWrite = false;
                     }
 					if (this.sendArray.length > 0) {
-                        logger("writing more data for " + instanceId + " address " + targetAddress);
+                        logger("Writing more data for " + instanceId + " address " + targetAddress, "info");
 						this.writeData(watchType, instanceId, targetAddress);
 					} else {
-                        logger("reading data for instance: " + instanceId);
+                        logger("Reading data for instance: " + instanceId, "info");
 						this.read(watchType, instanceId, targetAddress);
 					}
 				}.bind(this),
 				onFailure: function (e, options) {
-                    logger("failure options were: " + JSON.stringify(options))
+                    logger("Failure! Options were: " + JSON.stringify(options))
                     var parameters = JSON.parse(options["parameters"]);
                     var instanceId = parameters.instanceId;
                     var targetAddress = parameters.targetAddress;
-					logger("write failure with " + JSON.stringify(e) + " and instanceId " + instanceId);
-					logger("exception: " + JSON.stringify(e.exception));
+					logger("Write failure with " + JSON.stringify(e) + " and instanceId " + instanceId, "error");
+					lastCommAttemptState = false;
+					logger("Exception: " + JSON.stringify(e.exception));
 					if (e.errorCode && (e.errorCode == "NO_DATA_CHANNEL")) {
 						this.close(watchType, instanceId, targetAddress);
-						logger("closed instanceId: " + instanceId + " for target address: " + targetAddress);
+						logger("Closed instanceId: " + instanceId + " for target address: " + targetAddress, "error");
 						this.connect(watchType, targetAddress);
 					} else {
-                        logger("did not close instanceId: " + instanceId);
+                        logger("Did not close instanceId: " + instanceId), "warn";
 						this.read(watchType, instanceId, targetAddress);
 					}
 				}.bind(this)
@@ -374,6 +380,8 @@ BluetoothModel.prototype.writeData = function(watchType, instanceId, targetAddre
 			this.read(watchType, instanceId, targetAddress);
 		}
 	}
+	else
+		lastCommAttemptState = false;
 };
 
 BluetoothModel.prototype.read = function(watchType, instanceId, targetAddress) {
@@ -389,12 +397,14 @@ BluetoothModel.prototype.read = function(watchType, instanceId, targetAddress) {
 			onSuccess: function (e, options) {
                 var parameters = JSON.parse(options["parameters"]);
                 var instanceId = parameters.instanceId;
-                var targetAddress = parameters.targetAddress;
-                logger("Read success for instance " + instanceId + ": " + Object.toJSON(e), logger);
+				var targetAddress = parameters.targetAddress;
+				lastCommAttemptState = true;
+                logger("Read success for instance " + instanceId + ": " + Object.toJSON(e), "info");
                 bluetoothModel.readPortSuccess(e, watchType, instanceId, targetAddress)
             },
 			onFailure: function (e) {
 				this.InRead = false;
+				lastCommAttemptState = false;
 				if (watchType != "Pebble") {
 					notifier("Read failure. " + Object.toJSON(e), logger);
 				}

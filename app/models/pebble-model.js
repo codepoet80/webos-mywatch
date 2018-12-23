@@ -268,7 +268,7 @@ PebbleModel.prototype.CreatePebbleNotification30 = function(from, info, appid) {
 	}
 	pin.push(0x04); // icon
 	pin.push(0x04, 0x00); // length of int
-	icon_id = 0x80000000 | icon_id;
+	icon_id = 0x80000000 | this.PebbleIcons[icon_id];
 	pin.push(icon_id & 0xff, (icon_id >> 8) & 0xff, (icon_id >> 16) & 0xff, (icon_id >> 24) & 0xff);
 	pin.push(0x1c); // background color
 	pin.push(0x01, 0x00); // length of byte

@@ -21,6 +21,7 @@
     },
     {"source": "app/assistants/app-assistant.js"},
     {"source": "app/models/app-model.js"},
+    {"source": "app/models/system-model.js"},
     {"source": "app/models/hexdata.js"},
     {"source": "app/models/pebble-model.js"},
     {"source": "app/models/bluetooth-model.js"}

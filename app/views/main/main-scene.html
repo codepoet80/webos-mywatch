@@ -28,6 +28,7 @@
 		Re-launch app after changing this option.
 	</div>
 
+	<!--
 	<div class="palm-group">
 		<div class="palm-group-title" x-mojo-loc="">Timeout on Pebble</div>
 		<div class="palm-list">
@@ -44,6 +45,7 @@
 			</div>
 		</div>
 	</div>
+	-->
 
 	<div class="palm-group">
 		<div class="palm-group-title" x-mojo-loc="">Settings</div>
@@ -68,6 +70,7 @@
 					<div x-mojo-element="ListSelector" id="MessageSelector"></div>
 				</div>
 			</div>
+			<!--
 			<div class="palm-row" x-mojo-touch-feedback="delayed">
 				<div class="palm-row-wrapper">
 					<div x-mojo-element="ListSelector" id="BatterySelector"></div>
@@ -88,6 +91,7 @@
 					<div x-mojo-element="ListSelector" id="MacawSelector"></div>
 				</div>
 			</div>
+			-->
 			<div class="palm-row last" x-mojo-touch-feedback="delayed">
 				<div class="palm-row-wrapper">
 					<div x-mojo-element="ListSelector" id="OtherSelector"></div>
@@ -98,52 +102,24 @@
 
 	<!-- New Testers -->
 	<span x-mojo-loc="" id="testingTwisty">
-			<table class="palm-divider labeled" x-mojo-loc="">
-			<tr>
-				<td class="left"></td>
-				<td class="label">
-					Testing
-				</td>
-				<td class="right" style="width:100%; text-align: right" width="100%"><img id="testingTwistyImg" name="testingTwistyImg" src="images/arrow-down.png"></td>
-			</tr>
-			</table>
-		</span>
-		<div x-mojo-element="Drawer" id="drawerTesting" class="drawerClass" name="drawerTesting" tag="true">
-			<div style="height:10px;"></div>
-			<div x-mojo-element="Button" id="test-ring"></div>
-			<div x-mojo-element="Button" id="test-sms"></div>
-			<div x-mojo-element="Button" id="test-email"></div>
-			<div x-mojo-element="Button" id="test-music"></div>
-			<div style="height:10px;"></div>
-		</div> 
-
-	<!-- Testers
-	<div class="palm-group">
-		<div class="palm-group-title" x-mojo-loc="">Testing</div>
-		<div class="palm-list">
-			<div class="palm-row first" x-mojo-touch-feedback="delayed">
-				<div class="palm-row-wrapper">
-					<div x-mojo-element="Button" id="test-ring"></div>
-				</div>
-			</div>
-			<div class="palm-row" x-mojo-touch-feedback="delayed">
-				<div class="palm-row-wrapper">
-					<div x-mojo-element="Button" id="test-sms"></div>
-				</div>
-			</div>
-			<div class="palm-row" x-mojo-touch-feedback="delayed">
-				<div class="palm-row-wrapper">
-					<div x-mojo-element="Button" id="test-email"></div>
-				</div>
-			</div>
-			<div class="palm-row last" x-mojo-touch-feedback="delayed">
-				<div class="palm-row-wrapper">
-					<div x-mojo-element="Button" id="test-music"></div>
-				</div>
-			</div>
-		</div>
-	</div>
-	-->
+		<table class="palm-divider labeled" x-mojo-loc="">
+		<tr>
+			<td class="left"></td>
+			<td class="label">
+				Testing
+			</td>
+			<td class="right" style="width:100%; text-align: right" width="100%"><img id="testingTwistyImg" name="testingTwistyImg" src="images/arrow-down.png"></td>
+		</tr>
+		</table>
+	</span>
+	<div x-mojo-element="Drawer" id="drawerTesting" class="drawerClass" name="drawerTesting" tag="true">
+		<div style="height:10px;"></div>
+		<div x-mojo-element="Button" id="test-ring"></div>
+		<div x-mojo-element="Button" id="test-sms"></div>
+		<div x-mojo-element="Button" id="test-email"></div>
+		<!--<div x-mojo-element="Button" id="test-music"></div>-->
+		<div style="height:10px;"></div>
+	</div> 
 
 	<!-- Logging -->
 	<span x-mojo-loc="" id="logTwisty">

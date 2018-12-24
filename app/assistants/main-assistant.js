@@ -5,7 +5,6 @@ function MainAssistant() {
 		items: [
 				{label: "Whitelist", command: "do-whitelist"},
 				{label: "Bluetooth", command: "do-bluetooth"},
-				{label: "Show Logging", checkEnabled: true, command: 'do-showLogging', chosen:appModel.AppSettingsCurrent["showLogging"] },
 				{label: "Help", command: "do-help"}
 			]
 		};
@@ -31,7 +30,7 @@ MainAssistant.prototype.setup = function() {
 		{value: watchType});
 	Mojo.Event.listen(this.controller.get("watchSelector"), Mojo.Event.propertyChange, this.handleWatchOptionUpdate.bind(this));
 
-	this.controller.setupWidget("timeoutSelector",
+	/*this.controller.setupWidget("timeoutSelector",
 		{label: "Timeout", labelPlacement: Mojo.Widget.labelPlacementLeft,
 			choices: [{label: "Never", value: "0"}, {label: "5 min", value: "300"}, {label: "1 min", value: "60"}, {label: "20 sec", value: "20"}]},
 		this.timeoutModel = {value: timeoutValue, disabled: (watchType != "Pebble")});
@@ -43,14 +42,22 @@ MainAssistant.prototype.setup = function() {
 	this.controller.setupWidget("lostConnectionSignal", {trueValue: true, falseValue: false},
 		this.lostConnectionModel = {value: lostConnectionValue, disabled: (watchType != "Pebble") || (timeoutValue > 0)});
 	Mojo.Event.listen(this.controller.get("lostConnectionSignal"), Mojo.Event.propertyChange, this.handleLostConnectionOptionUpdate.bind(this));
+	*/
 
 	//App Option Toggles from Settings
 	for (var key in appModel.AppSettingsCurrent)
 	{
 		if (key.indexOf("value") == 0)
 		{
-			var optName = key.replace("value", "");
-			this.setupOptionToggles(optName);
+			try
+			{
+				var optName = key.replace("value", "");
+				this.setupOptionToggles(optName);
+			}
+			catch(e)
+			{
+				//Option removed
+			}
 		}
 	}
 
@@ -72,8 +79,8 @@ MainAssistant.prototype.setup = function() {
 	Mojo.Event.listen(this.controller.get('test-sms'), Mojo.Event.tap, this.testSms.bind(this));
 	this.controller.setupWidget("test-email", {}, {label: "Test Email"});
 	Mojo.Event.listen(this.controller.get('test-email'), Mojo.Event.tap, this.testEmail.bind(this));
-	this.controller.setupWidget("test-music", {}, {label: "Test Music"});
-	Mojo.Event.listen(this.controller.get('test-music'), Mojo.Event.tap, this.testMusic.bind(this));
+	//this.controller.setupWidget("test-music", {}, {label: "Test Music"});
+	//Mojo.Event.listen(this.controller.get('test-music'), Mojo.Event.tap, this.testMusic.bind(this));
 
 	//Logging drawer
 	this.showLogging = this.showLogging.bind(this);
@@ -137,7 +144,7 @@ MainAssistant.prototype.handleTimeoutOptionUpdate = function(event) {
 
 MainAssistant.prototype.setupOptionToggles = function(optionName)
 {
-	var choices = [{label: "Default", value: 0}, {label: "Msg only", value: 1}, {label: "Disabled", value: 2}];
+	var choices = [{label: "Enabled", value: 0}, {label: "Only Messages", value: 1}, {label: "Disabled", value: 2}];
 	this.controller.setupWidget(optionName + "Selector", {label: optionName, labelPlacement: Mojo.Widget.labelPlacementLeft, choices: choices}, {value: appModel.AppSettingsCurrent["value" + optionName]});
 	Mojo.Event.listen(this.controller.get(optionName + "Selector"), Mojo.Event.propertyChange, this.handleToggleOptionUpdate);
 };
@@ -242,6 +249,7 @@ MainAssistant.prototype.testEmail = function() {
 	});
 };
 
+/*
 MainAssistant.prototype.testMusic = function() {
 	this.controller.serviceRequest("palm://com.palm.applicationManager", {
 		method: "open",
@@ -253,6 +261,7 @@ MainAssistant.prototype.testMusic = function() {
 		onFailure: function() {}
 	});
 };
+*/
 
 MainAssistant.prototype.handleCommand = function(event) {
 	if (event.type == Mojo.Event.commandEnable &&

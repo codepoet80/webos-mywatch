@@ -39,6 +39,41 @@ BluetoothModel.prototype.getLastCommStatus = function ()
 	return this.lastCommAttemptSuccess;
 }
 
+BluetoothModel.prototype.getRadioState = function (turningon, turningoff, on, off)
+{
+	Mojo.Log.error("Getting Bluetooth radio state");
+	this.btMojoService("palm://com.palm.btmonitor/monitor/getradiostate", null, 
+		function(payload) {
+			Mojo.Log.error("Bluetooth radio state: " + payload.radio);
+			switch (payload.radio) {
+				case 'turningon':
+					if (turningon)
+						turningon();
+					break;
+					
+				case 'turningoff':
+					if (turningoff)
+						turningoff()
+					break;
+					
+				case 'off':
+					if (off)
+						off();
+					break;
+					
+				case 'on':
+					if (on)
+						on();
+					break;
+				
+				default:
+					Mojo.Log.info("btServiceStart: Unknown notification from BT Monitor, " + payload.radio);
+					break;
+			}
+			this.radioStateObtained = true;
+		}.bind(this));
+}
+
 BluetoothModel.prototype.btMojoService = function(url, params, cb)
 {
 	return new Mojo.Service.Request(url, {
@@ -797,6 +832,22 @@ BluetoothModel.prototype.close = function(watchType, instanceId, targetAddress) 
 		this.openspp = false;
 		logger("this.openspp " + this.openspp);
 	}
+};
+
+BluetoothModel.prototype.cleanup = function(instanceId) {
+	//if (this.openspp) {
+		logger("Cleanup " + this.urlservice + " " + instanceId);
+		new Mojo.Service.Request(this.urlservice, {
+			method: 'cleanup',
+			onSuccess: function (e) {
+				logger("Clean-up success");
+			}.bind(this),
+			onFailure: function (e) {
+				logger("Clean-up failure " + Object.toJSON(e));
+			}.bind(this)
+		});
+		this.openspp = false;
+	//}
 };
 
 BluetoothModel.prototype.closeConnection = function(watchType, instanceId, targetAddress) {

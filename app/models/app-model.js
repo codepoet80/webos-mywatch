@@ -27,11 +27,7 @@ var AppModel = function()
 		valueOther: 0,
 		valuePhone: 0,
 		valueEmail: 0,
-        valueMessage: 0,
-        valueMusicPlayer: 0,
-        valueMusicRemix: 0,
-        valueMacaw: 0,
-        valueBattery: 0,
+        valueMessage: 0
     };
 }
 

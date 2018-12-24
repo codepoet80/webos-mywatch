@@ -1,6 +1,7 @@
 var myAppId = "com.palm.webos.mywatch";
 var watchType = "Pebble";
 var appModel;
+var systemModel = null;
 var bluetoothModel = null;
 var pebbleModel = null;
 var MainStageName = "main";
@@ -13,6 +14,7 @@ var gblTimeOutHdl = 0;
 var timeoutValue = 0;
 var lostConnectionValue = 0;
 var closeWindowTimeout = false;
+var radioOff = false;
 var valueAll = 0;
 var valueOther = 0;
 var timeoutMusicPhoneValue = 5 * 60; // hardcoded: 5 min timeout for phone and music messages
@@ -40,9 +42,10 @@ function AppAssistant (appController) {
 	Mojo.Log.error("Creating app assistant");
 	this.appController = appController;
 	appModel = new AppModel();
+	systemModel = new SystemModel();
 	pebbleModel = new PebbleModel();
 	bluetoothModel = new BluetoothModel(this.logInfo, this.showInfo, pebbleModel, this.lastCommAttemptCallback, this);
-	
+
 	appModel.LoadSettings();
 	this.loadCookieValues();
 
@@ -59,7 +62,8 @@ function AppAssistant (appController) {
 	this.lastMusicPhoneWrite = 0;
 
 	watchType = appModel.AppSettingsCurrent["watchType"];
-	if ((watchType != "Pebble") && (watchType != "MW150") && (watchType != "LiveView")) {watchType = "Pebble";}
+	if ((watchType != "Pebble") && (watchType != "MW150") && (watchType != "LiveView")) 
+		watchType = "Pebble";
 
 	patternDB = openDatabase("ext:WhiteList", "1.0", "WhiteList", "10000");
 	refreshPatterns();
@@ -72,6 +76,9 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 	closeWindowTimeout = false;
 	myAppId = Mojo.Controller.appInfo.id;
 	gblLaunchParams = launchParams;
+	if (launchParams.retryCount)
+		sendAttempts = launchParams.retryCount;
+
 	this.logInfo('Params: ' + Object.toJSON(launchParams));
 	this.logInfo('Options: ' + Object.toJSON(appModel.AppSettingsCurrent));
 
@@ -123,9 +130,24 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 	}
 };
 
+AppAssistant.prototype.abortIfRadioOff = function()
+{
+	radioOff = true;
+	this.logInfo("Bluetooth radio reports off, not attempting to send message to watch.")
+	var logText = "Bluetooth off: My Watch can't send."
+	this.showInfo(logText);
+	if (launchParams && (typeof(launchParams) == 'object')) {
+		Mojo.Controller.getAppController().showBanner({messageText: logText, icon: 'icon24.png'}, "", "");
+		this.closeAfterNotification();
+	}
+}
+
 AppAssistant.prototype.doEventLaunch = function(launchParams)
 {
-	// not registered for notification or last notification too long ago
+	// Check if the radio is off -- in which case, we abort
+	bluetoothModel.getRadioState(null, null, null, this.abortIfRadioOff.bind(this));
+
+	// Register for SPP Notifications	
 	if (!this.sppNotificationService) {
 		if (watchType == "MW150") {
 			this.subscribe();
@@ -167,7 +189,8 @@ AppAssistant.prototype.subscribe = function() {
 			parameters: {"subscribe": true},
 			onSuccess: this.sppNotify.bind(this),
 			onFailure: function (e) {
-				this.showInfo("Failed to subscribe to Bluetooth notifications!")
+				this.showInfo("Failed to subscribe to Bluetooth notifications!");
+				this.sppNotificationService.cancel();
 				this.sppNotificationService = null;
 			}.bind(this)
 		};
@@ -263,7 +286,6 @@ AppAssistant.prototype.sppNotify = function(objData)
 	}
 };
 
-
 var sendAttempts = 0;
 var sendRetryTimeout = false;
 AppAssistant.prototype.sendLaunchMessageToWatch = function()
@@ -271,11 +293,11 @@ AppAssistant.prototype.sendLaunchMessageToWatch = function()
 	launchParams = gblLaunchParams;
 	clearTimeout(sendRetryTimeout);
 	sendRetryTimeout = false;
-	if (launchParams && (typeof(launchParams) == 'object')) {
+	if (launchParams && (typeof(launchParams) == 'object') && !radioOff) {
 		this.logInfo("We have a message to send to the watch, checking for connection.");
 		if (this.getOpen())
 		{
-;			this.logInfo("SPP connection reports ready. Sending message to watch.");
+			this.logInfo("SPP connection reports ready. Sending message to watch.");
 			if (launchParams.command == "SMS") {
 				bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, findAppIdByName("Messaging"), true, watchType, this.instanceId, this.targetAddress);
 			} else if (launchParams.command == "RING") {
@@ -294,18 +316,17 @@ AppAssistant.prototype.sendLaunchMessageToWatch = function()
 			sendAttempts++;
 			sppState = appModel.AppSettingsCurrent["sppState"];
 			this.logInfo("SPP not ready for messages. State is: " + sppState + ".");
-			if (sendAttempts == 25)
+			if (sendAttempts == 20 || sendAttempts == 40 || sendAttempts == 60)
 			{
 				if (sppState == "notifndisconnected" || sppState == "notifnconnected")
 				{
 					this.logInfo("Trying to restart sending procedure.");
 					appModel.AppSettingsCurrent["sppState"] = "notyetconnected";
-					this.cleanup();
 					setTimeout(this.relaunchApp.bind(this), 3000);
 					return;
 				}
 			}
-			else if (sendAttempts > 55)
+			else if (sendAttempts >= 80)
 			{
 				this.logInfo("Nothing left to try. Unable to send message.");
 				sendAttempts = 0;
@@ -348,6 +369,7 @@ AppAssistant.prototype.checkMessageSentToWatch = function()
 	else
 	{
 		this.logInfo("NOT shutting down after failed notificiation.");
+		this.cleanup();
 		this.showInfo(gblLaunchParams.command + " message to " + watchType + " failed", logger);
 	}
 }
@@ -355,20 +377,21 @@ AppAssistant.prototype.checkMessageSentToWatch = function()
 AppAssistant.prototype.closeAfterNotification = function()
 {
 	//TODO: If the main scene doesn't exist, close the dashboard
-	closeWindowTimeout = false;
-	clearTimeout(closeWindowTimeout);
-	var appController = Mojo.Controller.getAppController();
-	appController.closeStage("dashboard");
+	var stageProxy = this.controller.getStageProxy(MainStageName);
+	if (!stageProxy)
+	{
+		closeWindowTimeout = false;
+		clearTimeout(closeWindowTimeout);
+		var appController = Mojo.Controller.getAppController();
+		appController.closeAllStages();
+	}
 }
 
 AppAssistant.prototype.relaunchApp = function() {
-	new Mojo.Service.Request("palm://com.palm.applicationManager", {
-		method: "open",
-		parameters: {
-			id: myAppId,
-			params: gblLaunchParams
-		}
-	});
+	gblLaunchParams.retryCount = sendAttempts;
+	systemModel.SetSystemAlarmRelative("00:00:05", gblLaunchParams);
+	var appController = Mojo.Controller.getAppController();
+	appController.closeAllStages();
 };
 
 refreshPatterns = function() {
@@ -386,11 +409,6 @@ refreshPatterns = function() {
 			function(tx, error) {}
 		);
 	}.bind(this));
-};
-
-AppAssistant.prototype.timerHandler = function() {
-	bluetoothModel.read(watchType, this.instanceId, this.targetAddress);
-	//gblUpdateID = setTimeout(this.timerHandler.bind(this), 5000);
 };
 
 AppAssistant.prototype.getOpen = function() {
@@ -494,8 +512,14 @@ AppAssistant.prototype.showInfo = function(logText, logger) {
 
 AppAssistant.prototype.cleanup = function(event) {
 	appModel.SaveSettings();
+	if (this.sppNotificationService)
+		this.sppNotificationService.cancel();
 	this.sppNotificationService = null
 	bluetoothModel.close(watchType, this.instanceId, this.targetAddress);
+	//Forceable clean-up of SPP device files
+	systemModel.deleteFile("/dev/spp_tx_25");
+	systemModel.deleteFile("/dev/spp_rx_25");
+
 	Mojo.Log.error ("Cleaned up Bluetooth connections");
 };
 

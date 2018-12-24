@@ -1,4 +1,5 @@
 # My Watch
+![nightmoves-icon](https://raw.githubusercontent.com/codepoet80/webos-mywatch/master/icon48.png "My Watch Icon")
 A fork of MetaView's mWatch for Palm/HP webOS.
 
 This app allows webOS devices to send notifications to Pebble, LiveView from Sony or Sony-Ericsson MBW 150/200 watches. At the moment, phone calls, SMS messages and emails are supported. The original supported music, as well, but that has to be re-written and is not currently a part of this project.

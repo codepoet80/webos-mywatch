@@ -277,8 +277,9 @@ MainAssistant.prototype.handleCommand = function(event) {
 					title: "Help",
 					allowHTMLMessage: true,
 					message: "Connect your webOS device with a Pebble, a LiveView from Sony or a MBW 150/200 watch from Sony-Ericsson.<br/>" +
-							"If you like it check out my other apps in the AppCatalog.<br/><br/>" +
-							"(c) 2011 <a href='http://www.metaviewsoft.de/wordpress'>MetaViewSoft</a>",
+							"If you like it check out my other apps in PreWare.<br/><br/>" +
+							"&copy; 2015 <a href='http://www.metaviewsoft.de/wordpress'>MetaViewSoft</a><br/>" +
+							"2018 Updates by Jonathan Wise. MIT Licensed.",
 					choices:[
 						{label: 'OK', value:"ok", type:'dismiss'}
 					]

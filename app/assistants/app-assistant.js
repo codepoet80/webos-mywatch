@@ -55,7 +55,7 @@ function AppAssistant (appController) {
 
 	this.sppNotificationService = null;
 	this.serverEnabled = false;
-	this.instanceId = -1;
+	this.instanceId = appModel.AppSettingsCurrent["lastInstanceId"];
 
 	this.lastNotify = 0;
 	this.logArray = [];
@@ -511,14 +511,16 @@ AppAssistant.prototype.showInfo = function(logText, logger) {
 };
 
 AppAssistant.prototype.cleanup = function(event) {
+	//Forceable clean-up of SPP device files
+	systemModel.deleteFile("/dev/spp_tx_" + this.instanceId);
+	systemModel.deleteFile("/dev/spp_rx_" + this.instanceId);
+	appModel.AppSettingsCurrent["lastInstanceId"] = this.instanceId;
 	appModel.SaveSettings();
+
 	if (this.sppNotificationService)
 		this.sppNotificationService.cancel();
 	this.sppNotificationService = null
 	bluetoothModel.close(watchType, this.instanceId, this.targetAddress);
-	//Forceable clean-up of SPP device files
-	systemModel.deleteFile("/dev/spp_tx_25");
-	systemModel.deleteFile("/dev/spp_rx_25");
 
 	Mojo.Log.error ("Cleaned up Bluetooth connections");
 };

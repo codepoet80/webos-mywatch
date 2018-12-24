@@ -1,0 +1,31 @@
+[
+	{
+		"category": "Bluetooth",
+		"owner": "My Watch",
+		"prefs": [ {
+			"group": "BT Watch - System",
+			"restart": "app",
+			"label": "Messaging -> My Watch",
+			"help": "Report messaging notifications to My Watch",
+			"key": "mywSMS",
+			"type": "ToggleButton",
+			"value": true
+		},  {
+			"group": "BT Watch - System",
+			"restart": "app",
+			"label": "Mails -> My Watch",
+			"help": "Report new email to My Watch",
+			"key": "mywEmail",
+			"type": "ToggleButton",
+			"value": false
+		}, {
+			"group": "BT Watch - System",
+			"restart": "app",
+			"label": "Songs -> My Watch",
+			"help": "Report MP3 tag of new song to My Watch",
+			"key": "mywSong",
+			"type": "ToggleButton",
+			"value": false
+		}	]
+	}
+]

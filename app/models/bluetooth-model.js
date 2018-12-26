@@ -688,7 +688,7 @@ BluetoothModel.prototype.readPortSuccess = function(objData, watchType, instance
 							logger("Pebble OS Version 3 found.");
 							this.version = 3;
 						} else if ((data.charCodeAt(9) == 52) || (data.charCodeAt(10) == 52)) {
-							this.logInfo("Pebble OS Version 4 found.");
+							logger("Pebble OS Version 4 found.");
 							this.version = 4;
 						}
 						var version = data.charCodeAt(50) + 5;

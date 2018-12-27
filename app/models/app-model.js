@@ -24,12 +24,28 @@ var AppModel = function()
 		showLogging: false,
 		lastInstanceId: 25,
 		sppState: "notyetconnected",
-		valueAll: 0,
-		valueOther: 0,
-		valuePhone: 0,
-		valueEmail: 0,
-        valueMessage: 0
-    };
+		inactiveAllNotifications: 0,
+		inactiveOtherNotifications: 0,
+		perAppSettings : {
+			"com.palm.app.phone": {"inactive":0, "name":"Phone", "icon":"ICON_NOTIFICATION_GENERIC"},
+			"com.palm.app.email": {"inactive":0, "name":"Email", "icon":"ICON_GENERIC_EMAIL"},
+			"com.palm.app.messaging": {"inactive":0, "name":"Messaging", "icon":"ICON_GENERIC_SMS"},
+			"com.palm.app.musicplayer": {"inactive":0, "name":"Music", "icon":"ICON_AUDIO_CASSETTE"},
+			"com.hedami.musicplayerremix": {"inactive":0, "name":"Music Player Remix", "icon":"ICON_AUDIO_CASSETTE"},
+			"net.minego.phnx": {"inactive":0, "name":"Twitter", "icon":"ICON_NOTIFICATION_TWITTER"},
+			"luna.battery.alert": {"inactive":0, "name":"Battery", "icon":"ICON_BLUESCREEN_OF_DEATH"},
+			"com.palm.app.calendar": {"inactive":0, "name":"Calendar", "icon":"ICON_BLUESCREEN_OF_DEATH"},
+			"de.schdefoon.toooor2": {"inactive":0, "name":"Gooooal", "icon":"ICON_SOCCER_GAME"},
+			"com.rustyapps.jogstatstrial": {"inactive":0, "name":"Jog Stats", "icon":"ICON_TIMELINE_SPORTS"},
+			"com.palm.futurepr0n.batterymonitorplus": {"inactive":0, "name":"Battery Monitor", "icon":"ICON_BLUESCREEN_OF_DEATH"},
+			"de.schdefoon.mediadb": {"inactive":0, "name":"Media DB", "icon":"ICON_TV_SHOW"},
+			"de.tamspalm.amigo2trial": {"inactive":0, "name":"Amigo Music", "icon":"ICON_MUSIC_EVENT"},
+			"de.schdefoon.tagesverse": {"inactive":0, "name":"Daily Verse", "icon":"ICON_NEWS_EVENT"},
+			"org.webosinternals.linphone": {"inactive":0, "name":"LinPhone", "icon":"ICON_NOTIFICATION_VIBER"},
+			"com.hobbyistsoftware.newsfeed": {"inactive":0, "name":"Newsfeed", "icon":"ICON_NEWS_EVENT"},
+			"com.palm.app.vpn": {"inactive":0, "name":"VPN", "icon":"ICON_NOTIFICATION_LINE"},
+		}
+	};
 }
 
 //You probably don't need to change the below functions since they all work against the Cookie defaults you defined above.

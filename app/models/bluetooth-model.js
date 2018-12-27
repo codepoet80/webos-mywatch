@@ -85,36 +85,33 @@ BluetoothModel.prototype.btMojoService = function(url, params, cb)
 
 BluetoothModel.prototype.sendPing = function(caller, number, watchType, instanceId, targetAddress) {
 	lastCommAttemptSuccess = true;
-	if ((valueAll < 2) && (valuePhone < 2)) {
-		// RING: just vibrate
-		caller = caller ? caller.replace(/\"/g, "'") : "";
-		number = number ? number.replace(/\"/g, "'") : "";
-		notifier(caller + " " + number, logger);
-		if (watchType == "MW150") {
-			var data = "\r\nRING\r\n";
-			this.write(data, data.length, watchType, instanceId, targetAddress);
-		} else if (watchType == "Pebble") {
-			var data = pebbleHelper.CreatePebblePing();
-			this.write(data, data.length, watchType, instanceId, targetAddress);
-		} else if (watchType == "LiveView") {
-			// green
-			var reply = [MSG_SETLED, 0x04, 0x00, 0x00, 0x00, 0x06, 0x07, 0xe0, 0x00, 0x00, 0x02, 0x00];
-			this.write(reply, reply.length, watchType, instanceId, targetAddress);
-			// red
-			reply = [MSG_SETLED, 0x04, 0x00, 0x00, 0x00, 0x06, 0xf8, 0x00, 0x00, 0x00, 0x02, 0x00];
-			this.write(reply, reply.length, watchType, instanceId, targetAddress);
-			// blue
-			reply = [MSG_SETLED, 0x04, 0x00, 0x00, 0x00, 0x06, 0x00, 0x1f, 0x00, 0x00, 0x02, 0x00];
-			this.write(reply, reply.length, watchType, instanceId, targetAddress);
-			// vibrate
-			reply = [MSG_SETVIBRATE, 0x04, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x02, 0x00];
-			this.write(reply, reply.length, watchType, instanceId, targetAddress);
-		}
+	// RING: just vibrate
+	caller = caller ? caller.replace(/\"/g, "'") : "";
+	number = number ? number.replace(/\"/g, "'") : "";
+	notifier(caller + " " + number, logger);
+	if (watchType == "MW150") {
+		var data = "\r\nRING\r\n";
+		this.write(data, data.length, watchType, instanceId, targetAddress);
+	} else if (watchType == "Pebble") {
+		var data = pebbleHelper.CreatePebblePing();
+		this.write(data, data.length, watchType, instanceId, targetAddress);
+	} else if (watchType == "LiveView") {
+		// green
+		var reply = [MSG_SETLED, 0x04, 0x00, 0x00, 0x00, 0x06, 0x07, 0xe0, 0x00, 0x00, 0x02, 0x00];
+		this.write(reply, reply.length, watchType, instanceId, targetAddress);
+		// red
+		reply = [MSG_SETLED, 0x04, 0x00, 0x00, 0x00, 0x06, 0xf8, 0x00, 0x00, 0x00, 0x02, 0x00];
+		this.write(reply, reply.length, watchType, instanceId, targetAddress);
+		// blue
+		reply = [MSG_SETLED, 0x04, 0x00, 0x00, 0x00, 0x06, 0x00, 0x1f, 0x00, 0x00, 0x02, 0x00];
+		this.write(reply, reply.length, watchType, instanceId, targetAddress);
+		// vibrate
+		reply = [MSG_SETVIBRATE, 0x04, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x02, 0x00];
+		this.write(reply, reply.length, watchType, instanceId, targetAddress);
 	}
 };
 
 BluetoothModel.prototype.sendInfo = function(info, wordwrap, icon, reason, appid, ring, watchType, instanceId, targetAddress) {
-	var value = valueOther;
 	var from = "Unknown";
 	var music = false;
 	lastCommAttemptSuccess = true;
@@ -125,13 +122,11 @@ BluetoothModel.prototype.sendInfo = function(info, wordwrap, icon, reason, appid
 	if (findLB > -1 && findAt > findLB)
 		appid = findAppIdByName("Email");
 
-	logger("Sending appid now: " + appid), "info";
-	value = appIds[appid].value;
-	from = appIds[appid].name;
-    logger("Sending info, value " + value + " from: " + from), "info";
+	logger("Sending info message from appid: " + appid), "info";
+	from = appModel.AppSettingsCurrent.perAppSettings[appid].name;
 
 	var accepted = false;
-	if ((appid != findAppIdByName("Messaging")) || (pattern.length == 0) || info.test) {
+	if ((appid != "com.palm.app.messaging") || (pattern.length == 0) || info.test) {
 		accepted = true;
 	} else {
 		for (var i=0; i<pattern.length; i++) {
@@ -144,45 +139,40 @@ BluetoothModel.prototype.sendInfo = function(info, wordwrap, icon, reason, appid
     }
     logger("sendInfo accepted " + accepted, "info");
 	if (accepted) {
-		if ((valueAll < 2) && (value < 2)) {
-			// remember what to display, then we don't need to extract it later
-			info = info ? info.replace(/\"/, "") : "";
-			var entry = {
-				info: info,
-				wordwrap: wordwrap,
-				icon: icon,
-				reason: reason,
-				appid: appid,
-				from: from,
-				ring: ring,
-				hash: info.hashCode(),
-				value: value,
-				music: music};
-			this.entries.push(entry);
-			logger("Send info entry: " + JSON.stringify(entry), "error");
-			if (((new Date()).getTime() - this.toSendTime) > (10 * 1000)) {
-				logger("Sending text to instance " + instanceId + ", address: " + targetAddress, "warn");
-				this.sendText(watchType, instanceId, targetAddress);
-			}
-			else
-				logger("Not sending info because of time check", "error");
+		// remember what to display, then we don't need to extract it later
+		info = info ? info.replace(/\"/, "") : "";
+		var entry = {
+			info: info,
+			wordwrap: wordwrap,
+			icon: icon,
+			reason: reason,
+			appid: appid,
+			from: from,
+			ring: ring,
+			hash: info.hashCode(),
+			music: music};
+		this.entries.push(entry);
+		logger("Send info entry: " + JSON.stringify(entry), "error");
+		if (((new Date()).getTime() - this.toSendTime) > (10 * 1000)) {
+			logger("Sending text to instance " + instanceId + ", address: " + targetAddress, "warn");
+			this.sendText(watchType, instanceId, targetAddress);
 		}
+		else
+			logger("Not sending info because of time check", "error");
 	}
 };
 
 BluetoothModel.prototype.sendText = function(watchType, instanceId, targetAddress) {
-	logger("sendText " + this.entries.length, "info");
+	logger("sendText length: " + this.entries.length + " to instance: " + instanceId, "info");
 	lastCommAttemptSuccess = true;
 
 	if (this.entries.length > 0) {
 		this.toSendEntry = this.entries.shift();
 		this.toSendTime = (new Date()).getTime();
 		if (watchType == "MW150") {
-			if ((valueAll < 1) && (this.toSendEntry.value < 1)) {
-				if (this.toSendEntry.ring) {
-					var data = "\r\nRING\r\n";
-					this.write(data, data.length, watchType, instanceId, targetAddress);
-				}
+			if (this.toSendEntry.ring) {
+				var data = "\r\nRING\r\n";
+				this.write(data, data.length, watchType, instanceId, targetAddress);
 			}
 			var data = "\r\n*SEMMII: 2,\"" + this.toSendEntry.hash + "\"\r\n";
 			this.write(data, data.length, watchType, instanceId, targetAddress);
@@ -229,7 +219,6 @@ BluetoothModel.prototype.sendText = function(watchType, instanceId, targetAddres
 
 BluetoothModel.prototype.sendRing = function(caller, number, watchType, instanceId, targetAddress) {
 
-	if ((valueAll < 2) && (valuePhone < 2)) {
 		lastCommAttemptSuccess = true;
 		// RING: just vibrate
 		caller = caller ? caller.replace(/\"/g, "'") : "";
@@ -240,10 +229,8 @@ BluetoothModel.prototype.sendRing = function(caller, number, watchType, instance
 			this.write(data, data.length, watchType, instanceId, targetAddress);
 			var data = "\r\n+CLIP: \"" + caller + "\",129,\"" + number + "\",,\"\"\r\n";
 			this.write(data, data.length, watchType, instanceId, targetAddress);
-			if ((valueAll < 1) && (valuePhone < 1)) {
-				var data = "\r\nRING\r\n";
-				this.write(data, data.length, watchType, instanceId, targetAddress);
-			}
+			var data = "\r\nRING\r\n";
+			this.write(data, data.length, watchType, instanceId, targetAddress);
 		} else if (watchType == "Pebble") {
 			var data = pebbleHelper.CreatePebblePhoneinfo(caller, number);
 			this.write(data, data.length, watchType, instanceId, targetAddress);
@@ -262,7 +249,6 @@ BluetoothModel.prototype.sendRing = function(caller, number, watchType, instance
 			reply = [MSG_SETVIBRATE, 0x04, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x02, 0x00];
 			this.write(reply, reply.length, watchType, instanceId, targetAddress);
 		}
-	}
 };
 
 BluetoothModel.prototype.hangup = function(watchType, instanceId, targetAddress) {

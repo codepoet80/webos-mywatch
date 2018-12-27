@@ -15,21 +15,17 @@ var timeoutValue = 0;
 var lostConnectionValue = 0;
 var closeWindowTimeout = false;
 var radioOff = false;
-var valueAll = 0;
-var valueOther = 0;
 var timeoutMusicPhoneValue = 5 * 60; // hardcoded: 5 min timeout for phone and music messages
-var lastMusicAppId = findAppIdByName("Music");
+var lastMusicAppId = "com.palm.app.musicplayer";
 
 function AppAssistant (appController) {
 	Mojo.Log.error("Creating app assistant");
 	this.appController = appController;
 	appModel = new AppModel();
-	systemModel = new SystemModel();
-	pebbleModel = new PebbleModel();
-	bluetoothModel = new BluetoothModel(this.logInfo, this.showInfo, pebbleModel, this.lastCommAttemptCallback, this);
-
 	appModel.LoadSettings();
-	this.loadCookieValues();
+	systemModel = new SystemModel();
+	pebbleModel = new PebbleModel(appModel.AppSettingsCurrent["perAppSettings"]);
+	bluetoothModel = new BluetoothModel(this.logInfo, this.showInfo, pebbleModel, this.lastCommAttemptCallback, this);
 
     this.urlgap     = 'palm://com.palm.bluetooth/gap';
     this.urlspp     = 'palm://com.palm.bluetooth/spp';
@@ -190,9 +186,6 @@ AppAssistant.prototype.sppNotify = function(objData)
 	this.logInfo("SPP Notification for " + watchType + " " + Object.toJSON(objData));
 	this.lastNotify = (new Date()).getTime();
 	if (!objData.notification) {
-		if (valueAll == 2) {
-			return;
-		}
 		if ((watchType == "MW150") || (watchType == "LiveView")) {
 			if (objData.returnValue && objData.subscribed) {
 				this.enableserver(true);
@@ -272,6 +265,12 @@ var sendAttempts = 0;
 var sendRetryTimeout = false;
 AppAssistant.prototype.sendLaunchMessageToWatch = function()
 {
+	//Check if this app is allowed to send a message, per the preferences
+	if (appModel.AppSettingsCurrent["inactiveAllNotifications"] > 0)
+	{
+		this.showInfo("All notifications disabled, not sending to watch.");
+		return;
+	}
 	launchParams = gblLaunchParams;
 	clearTimeout(sendRetryTimeout);
 	sendRetryTimeout = false;
@@ -281,11 +280,35 @@ AppAssistant.prototype.sendLaunchMessageToWatch = function()
 		{
 			this.logInfo("SPP connection reports ready. Sending message to watch.");
 			if (launchParams.command == "SMS") {
-				bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, findAppIdByName("Messaging"), true, watchType, this.instanceId, this.targetAddress);
+				if (appModel.AppSettingsCurrent.perAppSettings["com.palm.app.messaging"].inactive == 0)
+				{
+					bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, "com.palm.app.messaging", true, watchType, this.instanceId, this.targetAddress);
+				}
+				else
+				{
+					this.showInfo("SMS disabled, not sending to watch.");
+					return;
+				}
 			} else if (launchParams.command == "RING") {
-				bluetoothModel.sendRing(launchParams.caller, launchParams.number, watchType, this.instanceId, this.targetAddress);
+				if (appModel.AppSettingsCurrent.perAppSettings["com.palm.app.phone"].inactive == 0)
+				{
+					bluetoothModel.sendRing(launchParams.caller, launchParams.number, watchType, this.instanceId, this.targetAddress);
+				}
+				else
+				{
+					this.showInfo("Phone disabled, not sending to watch.");
+					return;
+				}
 			} else if (launchParams.command == "INFO") {
-				bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, launchParams.appid, false, watchType, this.instanceId, this.targetAddress);
+				if (appModel.AppSettingsCurrent.perAppSettings[launchParams.appid].inactive == 0)
+				{
+					bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, launchParams.appid, false, watchType, this.instanceId, this.targetAddress);
+				}
+				else
+				{
+					this.showInfo(appModel.AppSettingsCurrent.perAppSettings[launchParams.appid].name + " disabled, not sending to watch.");
+					return;
+				}
 			} else if (launchParams.command == "HANGUP") {
 				bluetoothModel.hangup(watchType, this.instanceId, this.targetAddress);
 			} else if (launchParams.command == "PING") {
@@ -376,23 +399,6 @@ AppAssistant.prototype.relaunchApp = function() {
 	appController.closeAllStages();
 };
 
-refreshPatterns = function() {
-	pattern = [];
-	patternDB.transaction(function (tx) {
-		tx.executeSql("SELECT pattern FROM WhiteList; GO;", [],
-			function(tx, result) {
-				if (result.rows) {
-					for (var i=0; i<result.rows.length; i++) {
-						var row = result.rows.item(i);
-						pattern.push(row.pattern);
-					}
-				}
-			}.bind(this),
-			function(tx, error) {}
-		);
-	}.bind(this));
-};
-
 AppAssistant.prototype.getOpen = function() {
 	return bluetoothModel.getOpen();
 };
@@ -476,9 +482,7 @@ AppAssistant.prototype.sendLog = function() {
 	return;
 };
 
-var lastShowInfoMessage = "";
 AppAssistant.prototype.showInfo = function(logText, logger) {
-	lastShowInfoMessage = logText;
 	var stageProxy = Mojo.Controller.getAppController().getStageProxy(DashboardName);
 	if (stageProxy) {
 		stageProxy.delegateToSceneAssistant("showInfo", logText, bluetoothModel.getOpen());
@@ -507,21 +511,6 @@ AppAssistant.prototype.cleanup = function(event) {
 	Mojo.Log.error ("Cleaned up Bluetooth connections");
 };
 
-AppAssistant.prototype.loadCookieValues = function()
-{
-	for (var key in appModel.AppSettingsCurrent)
-	{
-		var useValue =  appModel.AppSettingsCurrent[key];
-		if (key.indexOf("value") == 0)
-		{
-			if (!(useValue >= 0 && useValue <= 2))
-				useValue = 0;
-		}
-		Mojo.Log.info("setting: " + key + " value: " + useValue);
-		eval(key + "='" + useValue + "'");
-	}
-}
-
 String.prototype.hashCode = function(){
 	var hash = 0;
 	if (this.length == 0) return hash;
@@ -533,31 +522,28 @@ String.prototype.hashCode = function(){
 	return hash;
 };
 
-//App definitions for matching icons, and loading preferences
-var appIds= {
-	"com.palm.app.phone": {"value":0, "name":"Phone", "icon":"ICON_NOTIFICATION_GENERIC"},
-	"com.palm.app.email": {"value":0, "name":"Email", "icon":"ICON_GENERIC_EMAIL"},
-	"com.palm.app.messaging": {"value":0, "name":"Messaging", "icon":"ICON_GENERIC_SMS"},
-	"com.palm.app.musicplayer": {"value":0, "name":"Music", "icon":"ICON_AUDIO_CASSETTE"},
-	"com.hedami.musicplayerremix": {"value":0, "name":"Music Player Remix", "icon":"ICON_AUDIO_CASSETTE"},
-	"net.minego.phnx": {"value":0, "name":"Twitter", "icon":"ICON_NOTIFICATION_TWITTER"},
-	"luna.battery.alert": {"value":0, "name":"Battery", "icon":"ICON_BLUESCREEN_OF_DEATH"},
-	"com.palm.app.calendar": {"value":0, "name":"Calendar", "icon":"ICON_BLUESCREEN_OF_DEATH"},
-	"de.schdefoon.toooor2": {"value":0, "name":"Gooooal", "icon":"ICON_SOCCER_GAME"},
-	"com.rustyapps.jogstatstrial": {"value":0, "name":"Jog Stats", "icon":"ICON_TIMELINE_SPORTS"},
-	"com.palm.futurepr0n.batterymonitorplus": {"value":0, "name":"Battery Monitor", "icon":"ICON_BLUESCREEN_OF_DEATH"},
-	"de.schdefoon.mediadb": {"value":0, "name":"Media DB", "icon":"ICON_TV_SHOW"},
-	"de.tamspalm.amigo2trial": {"value":0, "name":"Amigo Music", "icon":"ICON_MUSIC_EVENT"},
-	"de.schdefoon.tagesverse": {"value":0, "name":"Daily Verse", "icon":"ICON_NEWS_EVENT"},
-	"org.webosinternals.linphone": {"value":0, "name":"LinPhone", "icon":"ICON_NOTIFICATION_VIBER"},
-	"com.hobbyistsoftware.newsfeed": {"value":0, "name":"Newsfeed", "icon":"ICON_NEWS_EVENT"},
-	"com.palm.app.vpn": {"value":0, "name":"VPN", "icon":"ICON_NOTIFICATION_LINE"},
-}
 findAppIdByName = function(name)
 {
-	for (var app in appIds) {
-		if (appIds[app].name.toLowerCase() == name.toLowerCase())
+	for (var app in appModel.AppSettingsCurrent.perAppSettings) {
+		if (appModel.AppSettingsCurrent.perAppSettings[app].name.toLowerCase() == name.toLowerCase())
 			return app;
 	}
 	Mojo.Log.error("App ID couldn't be resolved for the app name " + name);
 }
+
+refreshPatterns = function() {
+	pattern = [];
+	patternDB.transaction(function (tx) {
+		tx.executeSql("SELECT pattern FROM WhiteList; GO;", [],
+			function(tx, result) {
+				if (result.rows) {
+					for (var i=0; i<result.rows.length; i++) {
+						var row = result.rows.item(i);
+						pattern.push(row.pattern);
+					}
+				}
+			}.bind(this),
+			function(tx, error) {}
+		);
+	}.bind(this));
+};

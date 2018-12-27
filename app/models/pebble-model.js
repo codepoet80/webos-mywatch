@@ -1,4 +1,6 @@
-var PebbleModel = function() {
+var appIds;
+var PebbleModel = function(appMap) {
+	appIds = appMap;
 }
 
 PebbleModel.prototype.CreatePebblePing = function() {
@@ -230,6 +232,7 @@ PebbleModel.prototype.CreatePebbleNotification30 = function(from, info, appid) {
 		attributes_count++;
 		attributes_length += (3 + info.length);
 	}
+	Mojo.Log.error("*** HERE ***");
 	icon_id = appIds[appid].icon;
 
 	var pin_length = NOTIFICATION_PIN_LENGTH + attributes_length;

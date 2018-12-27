@@ -44,22 +44,23 @@ MainAssistant.prototype.setup = function() {
 	Mojo.Event.listen(this.controller.get("lostConnectionSignal"), Mojo.Event.propertyChange, this.handleLostConnectionOptionUpdate.bind(this));
 	*/
 
-	//App Option Toggles from Settings
-	for (var key in appModel.AppSettingsCurrent)
+	//App-specific Option Toggles from Settings
+	for (var key in appModel.AppSettingsCurrent.perAppSettings)
 	{
-		if (key.indexOf("value") == 0)
+		try
 		{
-			try
-			{
-				var optName = key.replace("value", "");
-				this.setupOptionToggles(optName);
-			}
-			catch(e)
-			{
-				//Option removed
-			}
+			var currOption = appModel.AppSettingsCurrent.perAppSettings[key];
+			this.setupOptionToggles(currOption.name, currOption.inactive);
+		}
+		catch(e)
+		{
+			//Option UI missing or option can't be loaded
+			Mojo.Log.error("Option or Option UI does not exist: " + key);
 		}
 	}
+	//Other Option Toggles
+	this.setupOptionToggles("All", appModel.AppSettingsCurrent["inactiveAllNotifications"]);
+	this.setupOptionToggles("Other", appModel.AppSettingsCurrent["inactiveOtherNotifications"]);
 
 	//Testing drawer
 	this.showTesting = this.showTesting.bind(this);
@@ -142,22 +143,33 @@ MainAssistant.prototype.handleTimeoutOptionUpdate = function(event) {
 	this.controller.modelChanged(this.lostConnectionModel, this);
 };
 
-MainAssistant.prototype.setupOptionToggles = function(optionName)
+MainAssistant.prototype.setupOptionToggles = function(optionName, optionValue)
 {
+	Mojo.Log.error("setting up option " + optionName);
 	var choices = [{label: "Enabled", value: 0}, {label: "Only Messages", value: 1}, {label: "Disabled", value: 2}];
-	this.controller.setupWidget(optionName + "Selector", {label: optionName, labelPlacement: Mojo.Widget.labelPlacementLeft, choices: choices}, {value: appModel.AppSettingsCurrent["value" + optionName]});
+	this.controller.setupWidget(optionName + "Selector", {label: optionName, labelPlacement: Mojo.Widget.labelPlacementLeft, choices: choices}, {value: optionValue});
 	Mojo.Event.listen(this.controller.get(optionName + "Selector"), Mojo.Event.propertyChange, this.handleToggleOptionUpdate);
 };
 
 MainAssistant.prototype.handleToggleOptionUpdate = function(event) {
 	Mojo.Log.info("handle toggle update: " + event.srcElement.id + " = " + event.value);
-	var optName = event.srcElement.id
-	var optName = "value" + optName.replace("Selector", "");
-	appModel.AppSettingsCurrent[optName] = Number(event.value);
-	appModel.SaveSettings();
-	Mojo.Log.info('Options after save: ' + Object.toJSON(appModel.AppSettingsCurrent));
-	eval(optName + "=" + Number(event.value));
-	Mojo.Log.info(optName + " = " + eval(optName));
+	var optName = event.srcElement.id.replace("Selector", "");
+	var optValue = Number(event.value)
+	if (optName == "All")
+	{
+		appModel.AppSettingsCurrent["inactiveAllNotifications"] = optValue;
+	}
+	else if (optName == "Other")
+	{
+		appModel.AppSettingsCurrent["inactiveOtherNotifications"] = optValue;
+	}
+	else
+	{
+		var appId = findAppIdByName(optName);
+		appModel.AppSettingsCurrent.perAppSettings[appId].inactive = optValue;
+		appModel.SaveSettings();
+		Mojo.Log.info('Options after save: ' + Object.toJSON(appModel.AppSettingsCurrent));
+	}
 };
 
 MainAssistant.prototype.handleLostConnectionOptionUpdate = function(event) {

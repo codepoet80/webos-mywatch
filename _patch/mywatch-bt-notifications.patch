@@ -9,13 +9,13 @@ index 82de994..6a97eb0 100644
 -	
 +
 +		//Patch to report new Mail to BT-watch SE MBW-150
-+		this.getTweaksPrefs = new Mojo.Service.Request("palm://org.webosinternals.tweaks.prefs/", {
-+			method: 'get', parameters: {'owner': "bluetooth-mbw150", 
-+			keys: ["mbwEmail"]},
++		this.radioState = new Mojo.Service.Request("palm://com.palm.btmonitor/monitor/getradiostate", {
++			parameters: { 
++				},
 +			onSuccess: function(response) {
 +				if(response) {
-+					if(response.mbwEmail == true) {
-+						//Report Mail to ST-Watch MBW150
++					if(response.radio == "on") {
++						//Report Mail to My Watch
 +						var request = new Mojo.Service.Request('palm://com.palm.applicationManager', {
 +					        method: 'launch',
 +					        parameters: {
@@ -42,14 +42,14 @@ index 5a5aec0..7e9d6f3 100644
  	}
 +
 +
-+		//Patch to report new SMS to BT-watch SE MBW-150
-+		this.getTweaksPrefs = new Mojo.Service.Request("palm://org.webosinternals.tweaks.prefs/", {
-+			method: 'get', parameters: {'owner': "bluetooth-mbw150", 
-+			keys: ["mbwSMS"]},
++		Mojo.Log.error("** Reporting new SMS to MyWatch **");
++		this.radioState = new Mojo.Service.Request("palm://com.palm.btmonitor/monitor/getradiostate", {
++			parameters: { 
++				},
 +			onSuccess: function(response) {
 +				if(response) {
-+					if(response.mbwSMS== true) {
-+						//Report Mail to ST-Watch MBW150
++					if(response.radio == "on") {
++						//MyWatch
 +						var request = new Mojo.Service.Request('palm://com.palm.applicationManager', {
 +					        method: 'launch',
 +					        parameters: {
@@ -59,7 +59,7 @@ index 5a5aec0..7e9d6f3 100644
 +				     	   	onSuccess: function() {},
 +				       	  	onFailure: function() {}
 +				          	});
-+					}
++					} else { Mojo.Log.error("** Cancelling MyWatch message, Bluetooth radio not on **"); }
 +				}
 +			}.bind(this)});
  	
@@ -77,13 +77,13 @@ index 6eb982a..1e238cd 100644
 +
 +			//Patch report Title to BT-Watch SE MBW-150	to report new Mail to BT-watch SE MBW-150
 +			if (message === this.MESSAGE_SONG_CHANGED){
-+				this.getTweaksPrefs = new Mojo.Service.Request("palm://org.webosinternals.tweaks.prefs/", {
-+				method: 'get', parameters: {'owner': "bluetooth-mbw150", 
-+				keys: ["mbwSong"]},
-+					onSuccess: function(response) {
++				this.getTweaksPrefs = new Mojo.Service.Request("palm://com.palm.btmonitor/monitor/getradiostate", {
++				parameters: {  
++				   },
++				   onSuccess: function(response) {
 +						if(response) {
-+							if(response.mbwSong == true) {
-+								Mojo.Log.error('ABOUT TO Report Title to ST-Watch MBW150');
++							if(response.radio == "on") {
++								Mojo.Log.error('ABOUT TO Report Title to My Watch');
 +								var currentSong = this.getCurrentSong();
 +								var request = new Mojo.Service.Request('palm://com.palm.applicationManager', {
 +						      		  method: 'launch',
@@ -95,7 +95,7 @@ index 6eb982a..1e238cd 100644
 +			       					  	onFailure: function() {}
 +				        		  	});	
 +							}
-+						}
++					}
 +				}.bind(this)});			
 +			}
 +

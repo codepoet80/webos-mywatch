@@ -18,24 +18,6 @@ var radioOff = false;
 var valueAll = 0;
 var valueOther = 0;
 var timeoutMusicPhoneValue = 5 * 60; // hardcoded: 5 min timeout for phone and music messages
-var appIds= {
-	"com.palm.app.phone": {"value":0, "name":"Phone", "icon":"ICON_NOTIFICATION_GENERIC"},
-	"com.palm.app.email": {"value":0, "name":"Email", "icon":"ICON_GENERIC_EMAIL"},
-	"com.palm.app.messaging": {"value":0, "name":"Messaging", "icon":"ICON_GENERIC_SMS"},
-	"com.palm.app.musicplayer": {"value":0, "name":"Music", "icon":"ICON_AUDIO_CASSETTE"},
-	"com.hedami.musicplayerremix": {"value":0, "name":"Music Player Remix", "icon":"ICON_AUDIO_CASSETTE"},
-	"net.minego.phnx": {"value":0, "name":"Twitter", "icon":"ICON_NOTIFICATION_TWITTER"},
-	"luna.battery.alert": {"value":0, "name":"Battery", "icon":"ICON_TIMELINE_CALENDAR"},
-	"com.palm.app.calendar": {"value":0, "name":"Calendar", "icon":"ICON_BLUESCREEN_OF_DEATH"},
-}
-findAppIdByName = function(name)
-{
-	for (var app in appIds) {
-		if (appIds[app].name.toLowerCase() == name.toLowerCase())
-			return app;
-	}
-	Mojo.Log.error("App ID couldn't be resolved for the app name " + name);
-}
 var lastMusicAppId = findAppIdByName("Music");
 
 function AppAssistant (appController) {
@@ -550,3 +532,32 @@ String.prototype.hashCode = function(){
 	}
 	return hash;
 };
+
+//App definitions for matching icons, and loading preferences
+var appIds= {
+	"com.palm.app.phone": {"value":0, "name":"Phone", "icon":"ICON_NOTIFICATION_GENERIC"},
+	"com.palm.app.email": {"value":0, "name":"Email", "icon":"ICON_GENERIC_EMAIL"},
+	"com.palm.app.messaging": {"value":0, "name":"Messaging", "icon":"ICON_GENERIC_SMS"},
+	"com.palm.app.musicplayer": {"value":0, "name":"Music", "icon":"ICON_AUDIO_CASSETTE"},
+	"com.hedami.musicplayerremix": {"value":0, "name":"Music Player Remix", "icon":"ICON_AUDIO_CASSETTE"},
+	"net.minego.phnx": {"value":0, "name":"Twitter", "icon":"ICON_NOTIFICATION_TWITTER"},
+	"luna.battery.alert": {"value":0, "name":"Battery", "icon":"ICON_BLUESCREEN_OF_DEATH"},
+	"com.palm.app.calendar": {"value":0, "name":"Calendar", "icon":"ICON_BLUESCREEN_OF_DEATH"},
+	"de.schdefoon.toooor2": {"value":0, "name":"Gooooal", "icon":"ICON_SOCCER_GAME"},
+	"com.rustyapps.jogstatstrial": {"value":0, "name":"Jog Stats", "icon":"ICON_TIMELINE_SPORTS"},
+	"com.palm.futurepr0n.batterymonitorplus": {"value":0, "name":"Battery Monitor", "icon":"ICON_BLUESCREEN_OF_DEATH"},
+	"de.schdefoon.mediadb": {"value":0, "name":"Media DB", "icon":"ICON_TV_SHOW"},
+	"de.tamspalm.amigo2trial": {"value":0, "name":"Amigo Music", "icon":"ICON_MUSIC_EVENT"},
+	"de.schdefoon.tagesverse": {"value":0, "name":"Daily Verse", "icon":"ICON_NEWS_EVENT"},
+	"org.webosinternals.linphone": {"value":0, "name":"LinPhone", "icon":"ICON_NOTIFICATION_VIBER"},
+	"com.hobbyistsoftware.newsfeed": {"value":0, "name":"Newsfeed", "icon":"ICON_NEWS_EVENT"},
+	"com.palm.app.vpn": {"value":0, "name":"VPN", "icon":"ICON_NOTIFICATION_LINE"},
+}
+findAppIdByName = function(name)
+{
+	for (var app in appIds) {
+		if (appIds[app].name.toLowerCase() == name.toLowerCase())
+			return app;
+	}
+	Mojo.Log.error("App ID couldn't be resolved for the app name " + name);
+}

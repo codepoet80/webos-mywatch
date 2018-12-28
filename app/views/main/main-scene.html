@@ -14,6 +14,8 @@
 <div id="watchWrapper" style="height:6px; margin-top: 6px; margin-left:0px; margin-right:0px;"></div>
 
 <div class="palm-scene">
+
+	<!-- Watch Type List -->
 	<div class="palm-group">
 		<div class="palm-group-title">Connection</div>
 		<div class="palm-list">
@@ -28,75 +30,22 @@
 		Re-launch app after changing this option.
 	</div>
 
-	<!--
-	<div class="palm-group">
-		<div class="palm-group-title" x-mojo-loc="">Timeout on Pebble</div>
-		<div class="palm-list">
-			<div class="palm-row first" x-mojo-touch-feedback="delayed">
-				<div class="palm-row-wrapper">
-					<div x-mojo-element="ListSelector" id="timeoutSelector"></div>
-				</div>
-			</div>
-			<div class="palm-row last" x-mojo-touch-feedback="delayed">
-				<div class="palm-row-wrapper">
-					<div x-mojo-element="CheckBox" id="lostConnectionSignal"></div>
-					<div class="title truncating-text">Lost Connection Signal</div>
-				</div>
-			</div>
-		</div>
-	</div>
-	-->
-
-	<div class="palm-group">
-		<div class="palm-group-title" x-mojo-loc="">Settings</div>
-		<div class="palm-list">
-			<div class="palm-row first" x-mojo-touch-feedback="delayed">
-				<div class="palm-row-wrapper">
-					<div x-mojo-element="ListSelector" id="AllSelector"></div>
-				</div>
-			</div>
-			<div class="palm-row" x-mojo-touch-feedback="delayed">
-				<div class="palm-row-wrapper">
-					<div x-mojo-element="ListSelector" id="PhoneSelector"></div>
-				</div>
-			</div>
-			<div class="palm-row" x-mojo-touch-feedback="delayed">
-				<div class="palm-row-wrapper">
-					<div x-mojo-element="ListSelector" id="EmailSelector"></div>
-				</div>
-			</div>
-			<div class="palm-row" x-mojo-touch-feedback="delayed">
-				<div class="palm-row-wrapper">
-					<div x-mojo-element="ListSelector" id="MessagingSelector"></div>
-				</div>
-			</div>
-			<!--
-			<div class="palm-row" x-mojo-touch-feedback="delayed">
-				<div class="palm-row-wrapper">
-					<div x-mojo-element="ListSelector" id="BatterySelector"></div>
-				</div>
-			</div>
-			<div class="palm-row" x-mojo-touch-feedback="delayed">
-				<div class="palm-row-wrapper">
-					<div x-mojo-element="ListSelector" id="MusicPlayerSelector"></div>
-				</div>
-			</div>
-			<div class="palm-row" x-mojo-touch-feedback="delayed">
-				<div class="palm-row-wrapper">
-					<div x-mojo-element="ListSelector" id="MusicRemixSelector"></div>
-				</div>
-			</div>
-			<div class="palm-row" x-mojo-touch-feedback="delayed">
-				<div class="palm-row-wrapper">
-					<div x-mojo-element="ListSelector" id="MacawSelector"></div>
-				</div>
-			</div>
-			-->
-			<div class="palm-row last" x-mojo-touch-feedback="delayed">
-				<div class="palm-row-wrapper">
-					<div x-mojo-element="ListSelector" id="OtherSelector"></div>
-				</div>
-			</div>
+	<!-- App Option List -->
+	<span x-mojo-loc="" id="optionsTwisty">
+		<table class="palm-divider labeled" x-mojo-loc="">
+		<tr>
+			<td class="left"></td>
+			<td class="label">
+				Notifications
+			</td>
+			<td class="right" style="width:100%; text-align: right" width="100%"><img id="appOptionsTwistyImg" name="appOptionsTwistyImg" src="images/arrow-down.png"></td>
+		</tr>
+		</table>
+	</span>
+	<div x-mojo-element="Drawer" id="drawerAppOptions" name="drawerAppOptions" class="drawerClass" tag="true">
+	<!--<div x-mojo-loc="" id="appOptionsListContainer">-->
+		<div id="appOptionList" x-mojo-element="List" >
+			<!--This will be populated from data-->
 		</div>
 	</div>
 
@@ -112,12 +61,12 @@
 		</tr>
 		</table>
 	</span>
-	<div x-mojo-element="Drawer" id="drawerTesting" class="drawerClass" name="drawerTesting" tag="true">
+	<div x-mojo-element="Drawer" id="drawerTesting" name="drawerTesting" class="drawerClass" tag="true">
 		<div style="height:10px;"></div>
 		<div x-mojo-element="Button" id="test-ring"></div>
 		<div x-mojo-element="Button" id="test-sms"></div>
 		<div x-mojo-element="Button" id="test-email"></div>
-		<!--<div x-mojo-element="Button" id="test-music"></div>-->
+		<div x-mojo-element="Button" id="test-music"></div>
 		<div style="height:10px;"></div>
 	</div> 
 
@@ -133,7 +82,7 @@
 		</tr>
 		</table>
 	</span>
-	<div x-mojo-element="Drawer" id="drawerLogging" class="drawerClass" name="drawerLogging" tag="false">  
+	<div x-mojo-element="Drawer" id="drawerLogging" name="drawerLogging" class="drawerClass" tag="false">  
 		<div id="log-output">
 		</div>
 	</div> 

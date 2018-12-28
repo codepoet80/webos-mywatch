@@ -15,3 +15,4 @@ https://forums.webosnation.com/webos-homebrew-apps/331159-connecting-pebble-webo
 
 ## change-log
 - 1.0.1 - Initial experimental release, re-factoring capabilities into seperate models, and implementing error handling and re-try logic.
+- 1.0.2 - App preferences are populated dynamically from a single source. Eventually this could come from a file. Improvements to .patch file.

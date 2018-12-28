@@ -469,11 +469,11 @@ AppAssistant.prototype.logInfo = function(logText, level) {
 	//Update UI loggers, if present
 	var stageProxy = Mojo.Controller.getAppController().getStageProxy(MainStageName);
 	if (stageProxy) {
-		stageProxy.delegateToSceneAssistant("logInfo", logText, lastLoggingConnectionStatus);
+		stageProxy.delegateToSceneAssistant("logInfo", logText, lastLoggingConnectionStatus, level);
 	}
 	var stageProxy = Mojo.Controller.getAppController().getStageProxy(DashboardName);
 	if (stageProxy) {
-		stageProxy.delegateToSceneAssistant("logInfo", logText, lastLoggingConnectionStatus);
+		stageProxy.delegateToSceneAssistant("logInfo", logText, lastLoggingConnectionStatus, level);
 	}
 };
 
@@ -493,7 +493,7 @@ AppAssistant.prototype.showInfo = function(logText, logger) {
 	if (logger)
 		logger(logText);
 	else
-		this.logInfo(logText);
+		this.logInfo(logText, "error");
 };
 
 AppAssistant.prototype.cleanup = function(event) {

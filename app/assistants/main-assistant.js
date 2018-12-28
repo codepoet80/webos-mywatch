@@ -23,44 +23,28 @@ MainAssistant.prototype.setup = function() {
 			this.showLoggingDashboard(launchParams.dashInfo);
 	}
 
-	//Options
+	//Watch Type
 	this.controller.setupWidget("watchSelector",
 		{label: "Watch", labelPlacement: Mojo.Widget.labelPlacementLeft,
 			choices: [{label: "Pebble", value: "Pebble"}, {label: "MW150", value: "MW150"}, {label: "LiveView", value: "LiveView"}]},
 		{value: watchType});
 	Mojo.Event.listen(this.controller.get("watchSelector"), Mojo.Event.propertyChange, this.handleWatchOptionUpdate.bind(this));
 
-	/*this.controller.setupWidget("timeoutSelector",
-		{label: "Timeout", labelPlacement: Mojo.Widget.labelPlacementLeft,
-			choices: [{label: "Never", value: "0"}, {label: "5 min", value: "300"}, {label: "1 min", value: "60"}, {label: "20 sec", value: "20"}]},
-		this.timeoutModel = {value: timeoutValue, disabled: (watchType != "Pebble")});
-	Mojo.Event.listen(this.controller.get("timeoutSelector"), Mojo.Event.propertyChange, this.handleTimeoutOptionUpdate.bind(this));
-
-	if (timeoutValue > 0) {
-		lostConnectionValue = false;
-	}
-	this.controller.setupWidget("lostConnectionSignal", {trueValue: true, falseValue: false},
-		this.lostConnectionModel = {value: lostConnectionValue, disabled: (watchType != "Pebble") || (timeoutValue > 0)});
-	Mojo.Event.listen(this.controller.get("lostConnectionSignal"), Mojo.Event.propertyChange, this.handleLostConnectionOptionUpdate.bind(this));
-	*/
-
-	//App-specific Option Toggles from Settings
-	for (var key in appModel.AppSettingsCurrent.perAppSettings)
-	{
-		try
-		{
-			var currOption = appModel.AppSettingsCurrent.perAppSettings[key];
-			this.setupOptionToggles(currOption.name, currOption.inactive);
+	//Build Per App Option List area
+	this.showAppOptions = this.showAppOptions.bind(this);
+	this.controller.setupWidget("drawerAppOptions",
+		this.attributes = {
+			modelProperty: 'open',
+			unstyled: false
+		},
+		this.model = {
+			open: true
 		}
-		catch(e)
-		{
-			//Option UI missing or option can't be loaded
-			Mojo.Log.error("Option or Option UI does not exist: " + key);
-		}
-	}
-	//Other Option Toggles
-	this.setupOptionToggles("All", appModel.AppSettingsCurrent["inactiveAllNotifications"]);
-	this.setupOptionToggles("Other", appModel.AppSettingsCurrent["inactiveOtherNotifications"]);
+	);
+	Mojo.Event.listen(this.controller.get("optionsTwisty"), Mojo.Event.tap, this.showAppOptions);
+	var appItems = this.getAppItemList();
+	this.listModel = {listTitle:$L('App Notifications'), items:appItems};
+	this.controller.setupWidget('appOptionList', {itemTemplate:'main/list-item', listTemplate:'main/list-container'}, this.listModel);
 
 	//Testing drawer
 	this.showTesting = this.showTesting.bind(this);
@@ -80,8 +64,8 @@ MainAssistant.prototype.setup = function() {
 	Mojo.Event.listen(this.controller.get('test-sms'), Mojo.Event.tap, this.testSms.bind(this));
 	this.controller.setupWidget("test-email", {}, {label: "Test Email"});
 	Mojo.Event.listen(this.controller.get('test-email'), Mojo.Event.tap, this.testEmail.bind(this));
-	//this.controller.setupWidget("test-music", {}, {label: "Test Music"});
-	//Mojo.Event.listen(this.controller.get('test-music'), Mojo.Event.tap, this.testMusic.bind(this));
+	this.controller.setupWidget("test-music", {}, {label: "Test Music"});
+	Mojo.Event.listen(this.controller.get('test-music'), Mojo.Event.tap, this.testMusic.bind(this));
 
 	//Logging drawer
 	this.showLogging = this.showLogging.bind(this);
@@ -100,14 +84,57 @@ MainAssistant.prototype.setup = function() {
 	this.controller.setupWidget(Mojo.Menu.appMenu, this.menuattr, this.menumodel);
 };
 
-MainAssistant.prototype.activate = function(event) {
+MainAssistant.prototype.activate = function(event) 
+{
+	//Find all the options and set them up
+	var appItems = this.getAppItemList();
+	for(var i = 0; i < appItems.length; i++) {
+		this.SetupOptionToggles(appItems[i].data, appItems[i].definition)
+	}
 };
 
-MainAssistant.prototype.showLoggingDashboard = function(dashInfo) {
-	var pushDashboard = function (stageController) {
-		stageController.pushScene('dashboard', dashInfo);
-	};
-	Mojo.Controller.getAppController().createStageWithCallback({name: "dashboard", lightweight: true}, pushDashboard, 'dashboard');
+MainAssistant.prototype.SetupOptionToggles = function(optionName, toggleValue)
+{
+	//Set then enforce the model for the option toggles cause Mojo is stupid
+	var toggleWidgetName = optionName + "Option";
+	if (appModel.AppSettingsCurrent.inactiveAllNotifications == 1)
+		toggleValue = 1;
+	if (toggleValue == 0) {	toggleValue = true; }
+	else { toggleValue = false; }
+		
+	this.controller.setupWidget(this.controller.get(toggleWidgetName),
+		this.attributes = {
+			trueValue: 0,
+			falseValue: 1
+		},
+		this.model = {
+			value: toggleValue,
+			disabled: false
+		}
+	); 
+	this.SetToggleState(toggleWidgetName, toggleValue);
+	Mojo.Event.listen(this.controller.get(toggleWidgetName), Mojo.Event.propertyChange, this.handleToggleOptionUpdate.bind(this));
+}
+
+MainAssistant.prototype.SetToggleState = function(widgetName, toggledValue)
+{
+    //There appears to be a bug in Mojo that means a toggle button doesn't reflect its model state during instantiation
+	//	This work-around fixes it.
+
+    var children = this.controller.get(widgetName).querySelectorAll('*');
+    for (var i=0; i<children.length; i++) {
+        if (children[i].className.indexOf("toggle-button") != -1)
+        {
+			children[i].className = "toggle-button " + toggledValue;
+        }
+        if (children[i].tagName == "SPAN")
+        {
+            if (toggledValue.toString().toLowerCase() == "true")
+                children[i].innerHTML = "on";
+            else
+                children[i].innerHTML = "off";
+        }
+    }
 }
 
 MainAssistant.prototype.handleWatchOptionUpdate = function(event) {
@@ -143,38 +170,73 @@ MainAssistant.prototype.handleTimeoutOptionUpdate = function(event) {
 	this.controller.modelChanged(this.lostConnectionModel, this);
 };
 
-MainAssistant.prototype.setupOptionToggles = function(optionName, optionValue)
-{
-	Mojo.Log.error("setting up option " + optionName);
-	var choices = [{label: "Enabled", value: 0}, {label: "Only Messages", value: 1}, {label: "Disabled", value: 2}];
-	this.controller.setupWidget(optionName + "Selector", {label: optionName, labelPlacement: Mojo.Widget.labelPlacementLeft, choices: choices}, {value: optionValue});
-	Mojo.Event.listen(this.controller.get(optionName + "Selector"), Mojo.Event.propertyChange, this.handleToggleOptionUpdate);
-};
-
 MainAssistant.prototype.handleToggleOptionUpdate = function(event) {
-	Mojo.Log.info("handle toggle update: " + event.srcElement.id + " = " + event.value);
-	var optName = event.srcElement.id.replace("Selector", "");
-	var optValue = Number(event.value)
-	if (optName == "All")
+	this.logInfo("handle toggle update: " + event.srcElement.id + " = " + event.value, "error");
+	
+	var optName = event.srcElement.id.replace("Option", "");
+	//Translate the toggle widget value to a saveable value
+	if (event.value)
+		optValue = 0;
+	else
+		optValue = 1;
+	if (optName == "All") 	//If Toggling the ALL value
 	{
 		appModel.AppSettingsCurrent["inactiveAllNotifications"] = optValue;
+		var appItems = this.getAppItemList();
+		var otherItemValue = optValue;	//IF ALL is off, show the others as off
+		for(var i = 0; i < appItems.length; i++) {
+			if (optValue == 0)	//IF ALL is on, show the others are their saved value
+				otherItemValue = appItems[i].definition;
+			this.SetupOptionToggles(appItems[i].data, otherItemValue);
+		}
+		//Same thing for special "Other" case
+		var otherItemValue = optValue;
+		if (optValue == 0)
+				otherItemValue = appModel.AppSettingsCurrent.inactiveOtherNotifications;
+		this.SetupOptionToggles("Other", otherItemValue);
 	}
-	else if (optName == "Other")
+	else	//If Toggling any other value
 	{
-		appModel.AppSettingsCurrent["inactiveOtherNotifications"] = optValue;
+		//Don't allow turning on individual options if ALL option is off
+		if (optValue == 0 && appModel.AppSettingsCurrent["inactiveAllNotifications"] == 1)
+		{
+			this.logInfo("not setting option because ALL is off", null, "error");
+			this.SetToggleState(optName + "Option", false);
+		}
+		else
+		{
+			if (optName == "Other")	//Toggling the Other special case
+				appModel.AppSettingsCurrent["inactiveOtherNotifications"] = optValue;
+			else	//Toggling any other option
+			{
+				var appId = findAppIdByName(optName);
+				appModel.AppSettingsCurrent.perAppSettings[appId].inactive = optValue;
+			}
+		}
 	}
-	else
-	{
-		var appId = findAppIdByName(optName);
-		appModel.AppSettingsCurrent.perAppSettings[appId].inactive = optValue;
-		appModel.SaveSettings();
-		Mojo.Log.info('Options after save: ' + Object.toJSON(appModel.AppSettingsCurrent));
-	}
+	appModel.SaveSettings();
+	Mojo.Log.info('Options after save: ' + Object.toJSON(appModel.AppSettingsCurrent));
 };
 
 MainAssistant.prototype.handleLostConnectionOptionUpdate = function(event) {
 	lostConnectionValue = event.value;
 	appModel.AppSettingsCurrent["lostConnectionValue"] = lostConnectionValue;
+};
+
+MainAssistant.prototype.showAppOptions = function() {
+	this.controller.get("drawerAppOptions").mojo.toggleState();
+	appOptionsDrawerOpen = Boolean(this.controller.get("drawerAppOptions").tag);
+	if (appOptionsDrawerOpen)
+	{
+		this.controller.get("appOptionsTwistyImg").src = "images/arrow-down.png";
+		appOptionsDrawerOpen = false;
+	}
+	else
+	{
+		this.controller.get("appOptionsTwistyImg").src = "images/arrow-right.png";
+		appOptionsDrawerOpen = true;
+	}
+	this.controller.get("drawerAppOptions").tag = appOptionsDrawerOpen;
 };
 
 MainAssistant.prototype.showTesting = function() {
@@ -208,6 +270,13 @@ MainAssistant.prototype.showLogging = function() {
 	}
 	this.controller.get("drawerLogging").tag = logDrawerOpen;
 };
+
+MainAssistant.prototype.showLoggingDashboard = function(dashInfo) {
+	var pushDashboard = function (stageController) {
+		stageController.pushScene('dashboard', dashInfo);
+	};
+	Mojo.Controller.getAppController().createStageWithCallback({name: "dashboard", lightweight: true}, pushDashboard, 'dashboard');
+}
 
 MainAssistant.prototype.sendHangup = function() {
 	Mojo.Log.error("Sending hangup request");
@@ -254,26 +323,25 @@ MainAssistant.prototype.testEmail = function() {
 		method: "open",
 		parameters: {
 			id: myAppId,
-			params: {command: "INFO", info: "I watched C-beams glitter in the dark near the Tannhauser Gate...", wordwrap: true, appid: "com.palm.app.email", test: true}
+			params: {command: "INFO", info: "I watched C-beams glitter in the dark near the Tannhauser Gate...\nRoy Batty", wordwrap: true, appid: "com.palm.app.email", test: true}
 		},
 		onSuccess: function() {},
 		onFailure: function() {}
 	});
 };
 
-/*
 MainAssistant.prototype.testMusic = function() {
 	this.controller.serviceRequest("palm://com.palm.applicationManager", {
 		method: "open",
 		parameters: {
-			id: "myAppId",
-			params: {command: "INFO", info: "Test(artist)\n\nTest(tracl)", appid: "com.palm.app.musicplayer", test: true}
+			id: myAppId,
+			params: {command: "INFO", info: "My Way\nFrank Sinatra", appid: "com.palm.app.musicplayer", test: true}
 		},
 		onSuccess: function() {},
 		onFailure: function() {}
 	});
 };
-*/
+
 
 MainAssistant.prototype.handleCommand = function(event) {
 	if (event.type == Mojo.Event.commandEnable &&
@@ -324,12 +392,17 @@ MainAssistant.prototype.handleCommand = function(event) {
 	}
 };
 
-MainAssistant.prototype.logInfo = function(logText, open) {
-	Mojo.Log.info("logInfo:", logText);
+MainAssistant.prototype.logInfo = function(logText, open, level) {
+	if (level == "error")
+		Mojo.Log.error(logText);
+	if (level == "warn")
+		Mojo.Log.warn(logText);
+	else
+		Mojo.Log.info(logText);
 	this.controller.get('log-output').innerHTML = "<strong>" + (this.logOutputNum++) + "</strong>: " + logText + "<br />" + this.controller.get('log-output').innerHTML.substr(0, 1000) + "<br /><br />";
-	if (open) {
+	if (open == true) {
 		this.controller.get('watchWrapper').style.backgroundColor = "green";
-	} else {
+	} else if (open == false) {
 		this.controller.get('watchWrapper').style.backgroundColor = "red";
 	}
 };
@@ -338,3 +411,16 @@ MainAssistant.prototype.cleanup = function(event) {
 	appModel.SaveSettings();
 	Mojo.Controller.getAppController().closeAllStages()
 };
+
+MainAssistant.prototype.getAppItemList = function()
+{
+	var perAppSettings = appModel.AppSettingsCurrent["perAppSettings"];
+	var appSettingList = [];
+	appSettingList[appSettingList.length] = {data:"All", definition:appModel.AppSettingsCurrent["inactiveAllNotifications"]}
+	for (var key in perAppSettings)
+	{
+		appSettingList[appSettingList.length] = {data:perAppSettings[key].name, definition:perAppSettings[key].inactive}
+	}
+	appSettingList[appSettingList.length] = {data:"Other", definition:appModel.AppSettingsCurrent["inactiveOtherNotifications"]}
+	return appSettingList;
+}

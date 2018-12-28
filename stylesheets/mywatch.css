@@ -67,3 +67,8 @@
     position: relative;
     margin-right: 168px;
 }
+
+.optionDisabled {
+	background-color: green;
+	font-size: 28px;
+}

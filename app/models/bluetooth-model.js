@@ -122,9 +122,9 @@ BluetoothModel.prototype.sendInfo = function(info, wordwrap, icon, reason, appid
 	if (findLB > -1 && findAt > findLB)
 		appid = findAppIdByName("Email");
 
-	logger("Sending info message from appid: " + appid), "info";
 	from = appModel.AppSettingsCurrent.perAppSettings[appid].name;
 
+	//Check whitelist
 	var accepted = false;
 	if ((appid != "com.palm.app.messaging") || (pattern.length == 0) || info.test) {
 		accepted = true;
@@ -137,7 +137,8 @@ BluetoothModel.prototype.sendInfo = function(info, wordwrap, icon, reason, appid
 			}
 		}
     }
-    logger("sendInfo accepted " + accepted, "info");
+	logger("sendInfo accepted " + accepted, "info");
+	
 	if (accepted) {
 		// remember what to display, then we don't need to extract it later
 		info = info ? info.replace(/\"/, "") : "";

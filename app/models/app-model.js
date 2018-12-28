@@ -1,6 +1,6 @@
 /*
 App Model
- Version 0.3a
+ Version 0.3b
  Created: 2018
  Author: Jonathan Wise
  License: MIT
@@ -27,23 +27,22 @@ var AppModel = function()
 		inactiveAllNotifications: 0,
 		inactiveOtherNotifications: 0,
 		perAppSettings : {
-			"com.palm.app.phone": {"inactive":0, "name":"Phone", "icon":"ICON_NOTIFICATION_GENERIC"},
-			"com.palm.app.email": {"inactive":0, "name":"Email", "icon":"ICON_GENERIC_EMAIL"},
-			"com.palm.app.messaging": {"inactive":0, "name":"Messaging", "icon":"ICON_GENERIC_SMS"},
-			"com.palm.app.musicplayer": {"inactive":0, "name":"Music", "icon":"ICON_AUDIO_CASSETTE"},
-			"com.hedami.musicplayerremix": {"inactive":0, "name":"Music Player Remix", "icon":"ICON_AUDIO_CASSETTE"},
-			"net.minego.phnx": {"inactive":0, "name":"Twitter", "icon":"ICON_NOTIFICATION_TWITTER"},
-			"luna.battery.alert": {"inactive":0, "name":"Battery", "icon":"ICON_BLUESCREEN_OF_DEATH"},
-			"com.palm.app.calendar": {"inactive":0, "name":"Calendar", "icon":"ICON_BLUESCREEN_OF_DEATH"},
-			"de.schdefoon.toooor2": {"inactive":0, "name":"Gooooal", "icon":"ICON_SOCCER_GAME"},
-			"com.rustyapps.jogstatstrial": {"inactive":0, "name":"Jog Stats", "icon":"ICON_TIMELINE_SPORTS"},
-			"com.palm.futurepr0n.batterymonitorplus": {"inactive":0, "name":"Battery Monitor", "icon":"ICON_BLUESCREEN_OF_DEATH"},
-			"de.schdefoon.mediadb": {"inactive":0, "name":"Media DB", "icon":"ICON_TV_SHOW"},
-			"de.tamspalm.amigo2trial": {"inactive":0, "name":"Amigo Music", "icon":"ICON_MUSIC_EVENT"},
-			"de.schdefoon.tagesverse": {"inactive":0, "name":"Daily Verse", "icon":"ICON_NEWS_EVENT"},
-			"org.webosinternals.linphone": {"inactive":0, "name":"LinPhone", "icon":"ICON_NOTIFICATION_VIBER"},
-			"com.hobbyistsoftware.newsfeed": {"inactive":0, "name":"Newsfeed", "icon":"ICON_NEWS_EVENT"},
-			"com.palm.app.vpn": {"inactive":0, "name":"VPN", "icon":"ICON_NOTIFICATION_LINE"},
+			"com.palm.app.phone": {"inactive":0, "name":"Phone", "icon":"ICON_NOTIFICATION_GENERIC", "installed":-1},
+			"com.palm.app.email": {"inactive":0, "name":"Email", "icon":"ICON_GENERIC_EMAIL", "installed":-1},
+			"com.palm.app.messaging": {"inactive":0, "name":"Messaging", "icon":"ICON_GENERIC_SMS", "installed":-1},
+			"com.palm.app.musicplayer": {"inactive":0, "name":"Music", "icon":"ICON_AUDIO_CASSETTE", "installed":-1},
+			"com.hedami.musicplayerremix": {"inactive":0, "name":"Music Player Remix", "icon":"ICON_AUDIO_CASSETTE", "installed":0},
+			"net.minego.phnx": {"inactive":0, "name":"Twitter", "icon":"ICON_NOTIFICATION_TWITTER", "installed":0},
+			"luna.battery.alert": {"inactive":0, "name":"Battery", "icon":"ICON_BLUESCREEN_OF_DEATH", "installed":0},
+			"com.palm.app.calendar": {"inactive":0, "name":"Calendar", "icon":"ICON_BLUESCREEN_OF_DEATH", "installed":0},
+			"de.schdefoon.toooor2": {"inactive":0, "name":"Gooooal", "icon":"ICON_SOCCER_GAME", "installed":0},
+			"com.rustyapps.jogstatstrial": {"inactive":0, "name":"Jog Stats", "icon":"ICON_TIMELINE_SPORTS", "installed":0},
+			"com.palm.futurepr0n.batterymonitorplus": {"inactive":0, "name":"Battery Monitor", "icon":"ICON_BLUESCREEN_OF_DEATH", "installed":0},
+			"de.schdefoon.mediadb": {"inactive":0, "name":"Media DB", "icon":"ICON_TV_SHOW", "installed":0},
+			"de.tamspalm.amigo2trial": {"inactive":0, "name":"Amigo Music", "icon":"ICON_MUSIC_EVENT", "installed":0},
+			"de.schdefoon.tagesverse": {"inactive":0, "name":"Daily Verse", "icon":"ICON_NEWS_EVENT", "installed":0},
+			"org.webosinternals.linphone": {"inactive":0, "name":"LinPhone", "icon":"ICON_NOTIFICATION_VIBER", "installed":0},
+			"com.hobbyistsoftware.newsfeed": {"inactive":0, "name":"Newsfeed", "icon":"ICON_NEWS_EVENT", "installed":0},
 		}
 	};
 }
@@ -123,11 +122,14 @@ AppModel.prototype.ResetSettings = function()
 	this.SaveSettings();
 	Mojo.Log.info("reset settings");
 	
-	var stageController = Mojo.Controller.stageController;
-	stageController.popScene(this.DefaultScene);
-	Mojo.Log.info("closed default scene");
+	if (this.DefaultScene)
+	{
+		var stageController = Mojo.Controller.getAppController().getActiveStageController("card");
+		stageController.popScene(this.DefaultScene);
+		Mojo.Log.info("closed default scene");
 
-	//Restart main scene
-	stageController.pushScene(this.DefaultScene);
-	Mojo.Log.info("re-opened default scene");
+		//Restart main scene
+		stageController.pushScene(this.DefaultScene);
+		Mojo.Log.info("re-opened default scene");
+	}
 }

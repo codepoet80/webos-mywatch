@@ -1,5 +1,5 @@
 # Installation
-I don't really know how to make .patch files properly, so here's what you'll have to do for now:
+This is an alternate patch for mWatch/My Watch that doesn't require Tweaks
 
-* Uninstall the original Bluetooth Notifications patch from Preware
+* Uninstall the original "Bluetooth watch - SE MBW-150" patch (Found in Preware)
 * Install this patch using webOS Quick Install

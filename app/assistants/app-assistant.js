@@ -1,4 +1,4 @@
-var myAppId = "com.palm.webos.mywatch";
+var myAppId = "de.metaviewsoft.mwatch";
 var watchType = "Pebble";
 var appModel;
 var systemModel = null;

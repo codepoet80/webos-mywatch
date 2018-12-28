@@ -4,7 +4,8 @@ function MainAssistant() {
 	this.menumodel = {visible: true,
 		items: [
 				{label: "Whitelist", command: "do-whitelist"},
-				{label: "Bluetooth", command: "do-bluetooth"},
+				{label: "Bluetooth Preferences", command: "do-bluetooth"},
+				{label: "Reset settings", command: "do-reset"},
 				{label: "Help", command: "do-help"}
 			]
 		};
@@ -42,8 +43,17 @@ MainAssistant.prototype.setup = function() {
 		}
 	);
 	Mojo.Event.listen(this.controller.get("optionsTwisty"), Mojo.Event.tap, this.showAppOptions);
-	var appItems = this.getAppItemList();
-	this.listModel = {listTitle:$L('App Notifications'), items:appItems};
+	this.controller.setupWidget("spinnerApps",
+		this.attributes = {
+			spinnerSize: "large"
+		},
+		this.model = {
+			spinning: true
+		}
+	); 
+	//Get an intial list of app options. This will be updated once apps are scanned.
+	var appItems = this.makeAppItemList();
+	this.listModel = {listTitle:$L('App Notifications'), items:""};
 	this.controller.setupWidget('appOptionList', {itemTemplate:'main/list-item', listTemplate:'main/list-container'}, this.listModel);
 
 	//Testing drawer
@@ -86,11 +96,8 @@ MainAssistant.prototype.setup = function() {
 
 MainAssistant.prototype.activate = function(event) 
 {
-	//Find all the options and set them up
-	var appItems = this.getAppItemList();
-	for(var i = 0; i < appItems.length; i++) {
-		this.SetupOptionToggles(appItems[i].data, appItems[i].definition)
-	}
+	//Scan for installed apps to update the list
+	this.getAppInstalledList();
 };
 
 MainAssistant.prototype.SetupOptionToggles = function(optionName, toggleValue)
@@ -182,7 +189,7 @@ MainAssistant.prototype.handleToggleOptionUpdate = function(event) {
 	if (optName == "All") 	//If Toggling the ALL value
 	{
 		appModel.AppSettingsCurrent["inactiveAllNotifications"] = optValue;
-		var appItems = this.getAppItemList();
+		var appItems = this.makeAppItemList();
 		var otherItemValue = optValue;	//IF ALL is off, show the others as off
 		for(var i = 0; i < appItems.length; i++) {
 			if (optValue == 0)	//IF ALL is on, show the others are their saved value
@@ -342,7 +349,6 @@ MainAssistant.prototype.testMusic = function() {
 	});
 };
 
-
 MainAssistant.prototype.handleCommand = function(event) {
 	if (event.type == Mojo.Event.commandEnable &&
 	    (event.command == Mojo.Menu.helpCmd)) {
@@ -367,6 +373,9 @@ MainAssistant.prototype.handleCommand = function(event) {
 			break;
 			case "do-whitelist":
 				this.controller.stageController.pushScene("whitelist");	
+			break;
+			case "do-reset":
+				appModel.ResetSettings();
 			break;
 			case "do-showLogging":
 				appModel.AppSettingsCurrent["showLogging"] = !appModel.AppSettingsCurrent["showLogging"];
@@ -412,15 +421,76 @@ MainAssistant.prototype.cleanup = function(event) {
 	Mojo.Controller.getAppController().closeAllStages()
 };
 
-MainAssistant.prototype.getAppItemList = function()
+MainAssistant.prototype.makeAppItemList = function()
 {
 	var perAppSettings = appModel.AppSettingsCurrent["perAppSettings"];
 	var appSettingList = [];
 	appSettingList[appSettingList.length] = {data:"All", definition:appModel.AppSettingsCurrent["inactiveAllNotifications"]}
 	for (var key in perAppSettings)
 	{
-		appSettingList[appSettingList.length] = {data:perAppSettings[key].name, definition:perAppSettings[key].inactive}
+		//-1 means always installed, 0 means not installed, 1 means installed
+		if (perAppSettings[key].installed == -1 || perAppSettings[key].installed == 1)
+			appSettingList[appSettingList.length] = {data:perAppSettings[key].name, definition:perAppSettings[key].inactive}
 	}
 	appSettingList[appSettingList.length] = {data:"Other", definition:appModel.AppSettingsCurrent["inactiveOtherNotifications"]}
 	return appSettingList;
+}
+
+MainAssistant.prototype.updateInstalledAppsOptions = function()
+{
+	this.controller.get("spinnerAppsContainer").style.visibility = "hidden";
+	this.controller.get("spinnerAppsContainer").style.height = "0px";
+	this.controller.get("spinnerAppsContainer").style.padding = "0px";
+	
+	//Find all the options and set them up
+	var appItems = this.makeAppItemList();
+	this.listModel.items = appItems;
+	this.controller.modelChanged(this.listModel);
+
+	for(var i = 0; i < appItems.length; i++) {
+		Mojo.Log.error("setup option toggle: " + appItems[i].data);
+		this.SetupOptionToggles(appItems[i].data, appItems[i].definition)
+	}
+	this.controller.get("appOptionList").style.visibility = "visible";
+}
+
+var appsToCheck = 0;
+MainAssistant.prototype.getAppInstalledList = function()
+{
+	var perAppSettings = appModel.AppSettingsCurrent["perAppSettings"];
+	for (var key in perAppSettings)
+	{
+		if (perAppSettings[key].installed != -1)
+		{
+			appsToCheck++;
+			systemModel.checkFileExists("/media/cryptofs/apps/usr/palm/applications/" + key, this.appInstalledListCallback.bind(this));
+		}
+	}
+}
+
+var appsChecked = 0;
+MainAssistant.prototype.appInstalledListCallback = function(response, request)
+{
+	appsChecked++;
+	if (response && request && request.options && request.options.parameters && request.options.parameters.file)
+	{
+		var perAppSettings = appModel.AppSettingsCurrent["perAppSettings"];
+		var whichApp = request.options.parameters["file"];
+		whichApp = whichApp.replace("/media/cryptofs/apps/usr/palm/applications/", "");
+		if (response.exists && response.exists)
+		{
+			perAppSettings[whichApp].installed = "1";
+			Mojo.Log.info("Set installed to true for: " + whichApp);
+		}
+		else
+		{
+			perAppSettings[whichApp].installed = "0";
+			Mojo.Log.info("Set installed to false for: " + whichApp);
+		}
+	}
+	if (appsChecked >= appsToCheck)
+	{
+		Mojo.Log.info("All apps checked, now update the app options list!")
+		this.updateInstalledAppsOptions();
+	}
 }

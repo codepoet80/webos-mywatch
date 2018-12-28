@@ -2,7 +2,6 @@
 .palm-page-header .header-icon.mywatch {
     background: url(icon48.png) no-repeat; background-size: 32px 32px; 
 }
-.explain-text {	margin: 0px 16px 18px 16px; font-size: 14px; color: #666;}
 </style>
 <div class="palm-page-header">
 	<div class="header-icon mywatch"></div>
@@ -43,9 +42,12 @@
 		</table>
 	</span>
 	<div x-mojo-element="Drawer" id="drawerAppOptions" name="drawerAppOptions" class="drawerClass" tag="true">
-	<!--<div x-mojo-loc="" id="appOptionsListContainer">-->
-		<div id="appOptionList" x-mojo-element="List" >
+		<div id="appOptionList" x-mojo-element="List" style="visibility: collapse;">
 			<!--This will be populated from data-->
+		</div>
+		<div id="spinnerAppsContainer" name="spinnerAppsContainer">
+			<div x-mojo-element="Spinner" id="spinnerApps" name="spinnerApps" class="spinnerClass" style="margin:auto;"></div>
+			<div class="spinner-text">Scanning Installed Apps</div>
 		</div>
 	</div>
 

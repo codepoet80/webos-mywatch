@@ -19,7 +19,7 @@ index 82de994..6a97eb0 100644
 +						var request = new Mojo.Service.Request('palm://com.palm.applicationManager', {
 +					        method: 'launch',
 +					        parameters: {
-+					            id: "com.palm.webos.mywatch",
++					            id: "de.metaviewsoft.mwatch",
 +					            params: {command: "SMS", info: email.subject + "\n" + email.from.addr}
 +				   	    	 },
 +				     	   	onSuccess: function() {},
@@ -53,7 +53,7 @@ index 5a5aec0..7e9d6f3 100644
 +						var request = new Mojo.Service.Request('palm://com.palm.applicationManager', {
 +					        method: 'launch',
 +					        parameters: {
-+					            id: "com.palm.webos.mywatch",
++					            id: "de.metaviewsoft.mwatch",
 +					            params: {command: "SMS", info: notificationText, wordwrap: true}
 +				   	    	 },
 +				     	   	onSuccess: function() {},
@@ -88,7 +88,7 @@ index 6eb982a..1e238cd 100644
 +								var request = new Mojo.Service.Request('palm://com.palm.applicationManager', {
 +						      		  method: 'launch',
 +						     		   parameters: {
-+								            id: "com.palm.webos.mywatch",
++								            id: "de.metaviewsoft.mwatch",
 +								            params: {command: "INFO", info: currentSong.title + "\n " + currentSong.artist}
 +							   	    	 },
 +							     	   	onSuccess: function() {},
@@ -130,7 +130,7 @@ index 16b8cbe..f5aa5f8 100644
 +		                 caller: line.calls[0].contact
 +				};
 +				this.$.launchMW150.call({
-+					"id" : "com.palm.webos.mywatch",
++					"id" : "de.metaviewsoft.mwatch",
 +					"params" : params
 +				});
  		}

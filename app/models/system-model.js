@@ -6,8 +6,12 @@ SystemModel.prototype.deleteFile = function(file, onSuccess, onFailure) {
 	return this.doFileRequest('delete', {file:file}, onSuccess, onFailure);
 };
 
+SystemModel.prototype.checkFileExists = function(file, onSuccess, onFailure) {
+	return this.doFileRequest('exists', {file:file}, onSuccess, onFailure);
+}
+
 SystemModel.prototype.doFileRequest = function(method, params, onSuccess, onFailure) {
-	Mojo.Log.error("Sending file delete service request for: " + JSON.stringify(params))
+	Mojo.Log.error("Sending file service request for: " + JSON.stringify(params))
 	fileRequest = new Mojo.Service.Request("palm://ca.canucksoftware.filemgr", {
 		method: method,
 		parameters: params || {},

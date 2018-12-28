@@ -1,17 +1,7 @@
-.gps-output {
-	font-family:monospace;
-    font-size:11px;
-	position:fixed;
-    top:8px;
-    height:190px;
-	left:8px;
-	right:8px;
-    display:block;
-    border:1px red solid;
-    padding:3px;
-    margin:3px;
-	overflow-y:scroll;
-}
+
+.explain-text {	margin: 0px 16px 18px 16px; font-size: 14px; color: #666;}
+#spinnerAppsContainer { width:100%; padding-top:18px; padding-bottom:18px;}
+.spinner-text { margin-top:8px; margin-left: auto; margin-right:auto; text-align:center; font-size: 17px; color: #666;}
 
 #log-output {
 	font-family:monospace;

@@ -20,7 +20,7 @@ index 82de994..6a97eb0 100644
 +					        method: 'launch',
 +					        parameters: {
 +					            id: "de.metaviewsoft.mwatch",
-+					            params: {command: "SMS", info: email.subject + "\n" + email.from.addr}
++					            params: {command: "INFO", info: email.subject + "\n" + email.from.addr, appid: "com.palm.app.email"}
 +				   	    	 },
 +				     	   	onSuccess: function() {},
 +				       	  	onFailure: function() {}
@@ -89,7 +89,7 @@ index 6eb982a..1e238cd 100644
 +						      		  method: 'launch',
 +						     		   parameters: {
 +								            id: "de.metaviewsoft.mwatch",
-+								            params: {command: "INFO", info: currentSong.title + "\n " + currentSong.artist}
++								            params: {command: "INFO", info: currentSong.title + "\n " + currentSong.artist, appid: "com.palm.app.musicplayer"}
 +							   	    	 },
 +							     	   	onSuccess: function() {},
 +			       					  	onFailure: function() {}

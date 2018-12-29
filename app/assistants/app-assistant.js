@@ -299,14 +299,24 @@ AppAssistant.prototype.sendLaunchMessageToWatch = function()
 					this.showInfo("Phone disabled, not sending to watch.");
 					return;
 				}
-			} else if (launchParams.command == "INFO") {
-				if (appModel.AppSettingsCurrent.perAppSettings[launchParams.appid].inactive == 0)
+			} else if (launchParams.command == "INFO" && launchParams.appid ) {
+				if (appModel.AppSettingsCurrent.perAppSettings[launchParams.appid] && appModel.AppSettingsCurrent.perAppSettings[launchParams.appid].inactive == 0)
 				{
 					bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, launchParams.appid, false, watchType, this.instanceId, this.targetAddress);
 				}
 				else
 				{
 					this.showInfo(appModel.AppSettingsCurrent.perAppSettings[launchParams.appid].name + " disabled, not sending to watch.");
+					return;
+				}
+			} else if (launchParams.command == "INFO" && !launchParams.appid) {
+				if (appModel.AppSettingsCurrent.inactiveOtherNotifications == 0)
+				{
+					bluetoothModel.sendInfo(launchParams.info, launchParams.wordwrap, launchParams.icon, launchParams.reason, myAppId, false, watchType, this.instanceId, this.targetAddress);
+				}
+				else
+				{
+					this.showInfo("Other apps disabled, not sending to watch.");
 					return;
 				}
 			} else if (launchParams.command == "HANGUP") {
@@ -321,7 +331,7 @@ AppAssistant.prototype.sendLaunchMessageToWatch = function()
 			sendAttempts++;
 			sppState = appModel.AppSettingsCurrent["sppState"];
 			this.logInfo("SPP not ready for messages. State is: " + sppState + ".");
-			if (sendAttempts == 20 || sendAttempts == 40 || sendAttempts == 60)
+			if (sendAttempts == 5 || sendAttempts == 15 || sendAttempts == 25 || sendAttempts == 50 || sendAttempts == 70)
 			{
 				if (sppState == "notifndisconnected" || sppState == "notifnconnected")
 				{
@@ -331,7 +341,7 @@ AppAssistant.prototype.sendLaunchMessageToWatch = function()
 					return;
 				}
 			}
-			else if (sendAttempts >= 80)
+			else if (sendAttempts >= 75)
 			{
 				this.logInfo("Nothing left to try. Unable to send message.");
 				sendAttempts = 0;

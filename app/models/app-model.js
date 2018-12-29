@@ -43,6 +43,7 @@ var AppModel = function()
 			"de.schdefoon.tagesverse": {"inactive":0, "name":"Daily Verse", "icon":"ICON_NEWS_EVENT", "installed":0},
 			"org.webosinternals.linphone": {"inactive":0, "name":"LinPhone", "icon":"ICON_NOTIFICATION_VIBER", "installed":0},
 			"com.hobbyistsoftware.newsfeed": {"inactive":0, "name":"Newsfeed", "icon":"ICON_NEWS_EVENT", "installed":0},
+			"com.jonandnic.webos.stopwatch": {"inactive":0, "name":"Stopwatch", "icon":"ICON_ALARM_CLOCK", "installed":0},
 		}
 	};
 }

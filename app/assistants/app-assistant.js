@@ -83,7 +83,7 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 		gblRelaunched = true;
 		// If the stage exists, just bring it to the front by focusing its window.
 		// Or, if it is just the proxy, then it is being focused, so exit.
-		if (stageController && launchParams && (typeof(launchParams) == 'object'))
+		if (stageController && (!launchParams || (typeof(launchParams) != 'object')))
 		{
 			stageController.window.focus();
 		}

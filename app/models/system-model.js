@@ -11,7 +11,7 @@ SystemModel.prototype.checkFileExists = function(file, onSuccess, onFailure) {
 }
 
 SystemModel.prototype.doFileRequest = function(method, params, onSuccess, onFailure) {
-	Mojo.Log.error("Sending file service request for: " + JSON.stringify(params))
+	Mojo.Log.info("Sending file service request for: " + JSON.stringify(params))
 	fileRequest = new Mojo.Service.Request("palm://ca.canucksoftware.filemgr", {
 		method: method,
 		parameters: params || {},

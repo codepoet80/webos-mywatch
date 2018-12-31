@@ -339,7 +339,7 @@ AppAssistant.prototype.sendLaunchMessageToWatch = function()
 			sendAttempts++;
 			sppState = appModel.AppSettingsCurrent["sppState"];
 			this.logInfo("SPP not ready for messages. State is: " + sppState + ".", "error");
-			if (sendAttempts == 5 || sendAttempts == 15 || sendAttempts == 25 || sendAttempts == 50 || sendAttempts == 70)
+			if (sendAttempts == 10 || sendAttempts == 25 || sendAttempts == 40 || sendAttempts == 60)
 			{
 				if (sppState == "notifndisconnected" || sppState == "notifnconnected")
 				{
@@ -349,7 +349,7 @@ AppAssistant.prototype.sendLaunchMessageToWatch = function()
 					return;
 				}
 			}
-			else if (sendAttempts >= 75)
+			else if (sendAttempts >= 65)
 			{
 				this.logInfo("Nothing left to try. Unable to send message.", "error");
 				sendAttempts = 0;

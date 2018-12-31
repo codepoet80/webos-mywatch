@@ -44,7 +44,7 @@ DashboardAssistant.prototype.showInfo = function(logText, open) {
 	}
 };
 
-DashboardAssistant.prototype.logInfo = function(logText, open) {
+DashboardAssistant.prototype.showState = function(open) {
 	var signalDiv = this.controller.get('log-signal');
 	if (open) {
 		signalDiv.style.backgroundColor = "green";
@@ -56,16 +56,14 @@ DashboardAssistant.prototype.logInfo = function(logText, open) {
 };
 
 DashboardAssistant.prototype.considerForNotification = function(event) {
-	Mojo.Log.error("considerForNotification");
+
 };
 
 DashboardAssistant.prototype.activate = function(event) {
-	Mojo.Log.error("dashboard activate");
-	this.logInfo(null, lastLoggingConnectionStatus);
 };
 
 DashboardAssistant.prototype.deactivate = function(event) {
-	Mojo.Log.error("dashboard deactivate");
+
 };
 
 // Close the dashboard

@@ -3,6 +3,13 @@ function MainAssistant() {
 	this.menuattr = {omitDefaultItems: true};
 	this.menumodel = {visible: true,
 		items: [
+				{label: ('Troubleshooting'),
+					items: [
+						{label: "Persistent Dashboard", checkEnabled: true, command: 'do-togglePersistentDash', chosen:appModel.AppSettingsCurrent.debugPersistDash },
+						{label: "Large Log Font", checkEnabled: true, command: 'do-toggleLogFont', chosen:appModel.AppSettingsCurrent.debugLargerFont },
+						{label: "Verbose Logs", checkEnabled: true, command: 'do-toggleVerbose', chosen:appModel.AppSettingsCurrent.debugVerbose },
+					]
+				},
 				{label: "Whitelist", command: "do-whitelist"},
 				{label: "Bluetooth Preferences", command: "do-bluetooth"},
 				{label: "Reset settings", command: "do-reset"},
@@ -16,12 +23,9 @@ MainAssistant.prototype.setup = function() {
 	var dashboardStage = Mojo.Controller.getAppController().getStageController("dashboard");
 	if (dashboardStage) {
 		// Dashboard stage is already open
-		Mojo.Log.info("DELEGATING TO SCENE ASST");
 		dashboardStage.delegateToSceneAssistant("displayDashboard", launchParams.dashInfo);
 	} else {
-		Mojo.Log.info("No dashboardStage found.");
-		if (appModel.AppSettingsCurrent["showLogging"] == true)
-			this.showLoggingDashboard(launchParams.dashInfo);
+		this.showLoggingDashboard(launchParams.dashInfo);
 	}
 
 	//Watch Type
@@ -89,6 +93,14 @@ MainAssistant.prototype.setup = function() {
 		}
 	);
 	Mojo.Event.listen(this.controller.get("logTwisty"), Mojo.Event.tap, this.showLogging);
+	this.controller.setupWidget("scrollerLogs",
+		this.attributes = {
+			mode: 'vertical'
+			},
+		this.model = {}
+	); 
+	if (appModel.AppSettingsCurrent["debugLargerFont"] && appModel.AppSettingsCurrent["debugLargerFont"] == true)
+		this.controller.get("log-output").style.fontSize = "18px";
 
 	//Main menu
 	this.controller.setupWidget(Mojo.Menu.appMenu, this.menuattr, this.menumodel);
@@ -222,7 +234,6 @@ MainAssistant.prototype.handleToggleOptionUpdate = function(event) {
 		}
 	}
 	appModel.SaveSettings();
-	Mojo.Log.info('Options after save: ' + Object.toJSON(appModel.AppSettingsCurrent));
 };
 
 MainAssistant.prototype.handleLostConnectionOptionUpdate = function(event) {
@@ -286,7 +297,7 @@ MainAssistant.prototype.showLoggingDashboard = function(dashInfo) {
 }
 
 MainAssistant.prototype.sendHangup = function() {
-	Mojo.Log.error("Sending hangup request");
+	this.logInfo("Sending hangup request", "error");
 	this.controller.serviceRequest("palm://com.palm.applicationManager", {
 		method: "open",
 		parameters: {
@@ -312,7 +323,7 @@ MainAssistant.prototype.testRing = function() {
 };
 
 MainAssistant.prototype.testSms = function() {
-	Mojo.Log.error("Sending SMS request from app id " + myAppId);
+	this.logInfo("Sending SMS request from app id " + myAppId, "error");
 	var messagingId = findAppIdByName("Messaging");
 	this.controller.serviceRequest("palm://com.palm.applicationManager", {
 		method: "open",
@@ -375,19 +386,23 @@ MainAssistant.prototype.handleCommand = function(event) {
 				this.controller.stageController.pushScene("whitelist");	
 			break;
 			case "do-reset":
-				appModel.ResetSettings();
+				appModel.ResetSettings(false);
+				this.relaunchApp();
 			break;
-			case "do-showLogging":
-				appModel.AppSettingsCurrent["showLogging"] = !appModel.AppSettingsCurrent["showLogging"];
+			case "do-togglePersistentDash":
+				appModel.AppSettingsCurrent["debugPersistDash"] = !appModel.AppSettingsCurrent["debugPersistDash"];
 				this.controller.modelChanged(this.menumodel, this);
-				if (appModel.AppSettingsCurrent["showLogging"])
-					this.showLoggingDashboard(null);
-				else
-				{
-					var appController = Mojo.Controller.getAppController();
-					appController.closeStage(DashboardName);
-				}
-
+				this.relaunchApp();
+			break;
+			case "do-toggleVerbose":
+				appModel.AppSettingsCurrent["debugVerbose"] = !appModel.AppSettingsCurrent["debugVerbose"];
+				this.controller.modelChanged(this.menumodel, this);
+				this.relaunchApp();
+			break;
+			case "do-toggleLogFont":
+				appModel.AppSettingsCurrent["debugLargerFont"] = !appModel.AppSettingsCurrent["debugLargerFont"];
+				this.controller.modelChanged(this.menumodel, this);
+				this.relaunchApp();
 			break;
 			case "do-bluetooth":
 				new Mojo.Service.Request('palm://com.palm.applicationManager', {
@@ -401,18 +416,42 @@ MainAssistant.prototype.handleCommand = function(event) {
 	}
 };
 
-MainAssistant.prototype.logInfo = function(logText, open, level) {
-	if (level == "error")
+//Show Info send logs to log info at Error level, and show the message in a banner/dashboard and updates the connection state. It also works if the Dashboard is not open.
+AppAssistant.prototype.showInfo = function(logText, forceState) {
+	var useState = bluetoothModel.getOpen()
+	if (forceState)
+		useState = forceState;
+	var stageProxy = Mojo.Controller.getAppController().getStageProxy(DashboardName);
+	if (stageProxy) {
+		stageProxy.delegateToSceneAssistant("showInfo", logText, useState);
+	}
+	else
+		Mojo.Controller.getAppController().showBanner({messageText: logText, icon: 'icon24.png'}, "", "");
+	
+	if (this.logInfo)
+		this.logInfo(logText, "error");
+	else
+		Mojo.Log.error("*** logInfo could not be found: " + logText)
+};
+
+MainAssistant.prototype.logInfo = function(logText, level, open) {
+	if (level == "error" || appModel.AppSettingsCurrent["debugVerbose"] == true)
+	{
 		Mojo.Log.error(logText);
-	if (level == "warn")
+		this.controller.get('log-output').innerHTML = "<strong>" + (this.logOutputNum++) + "</strong>: " + logText + "<br />" + this.controller.get('log-output').innerHTML + "<br /><br />";
+	}
+	else if (level == "warn")
 		Mojo.Log.warn(logText);
 	else
 		Mojo.Log.info(logText);
-	this.controller.get('log-output').innerHTML = "<strong>" + (this.logOutputNum++) + "</strong>: " + logText + "<br />" + this.controller.get('log-output').innerHTML.substr(0, 1000) + "<br /><br />";
-	if (open == true) {
+	if (open && open == true) {
 		this.controller.get('watchWrapper').style.backgroundColor = "green";
-	} else if (open == false) {
+	} else {
 		this.controller.get('watchWrapper').style.backgroundColor = "red";
+	}
+	var stageProxy = Mojo.Controller.getAppController().getStageProxy(DashboardName);
+	if (stageProxy) {
+		stageProxy.delegateToSceneAssistant("showState", open);
 	}
 };
 
@@ -448,13 +487,19 @@ MainAssistant.prototype.updateInstalledAppsOptions = function()
 	this.controller.modelChanged(this.listModel);
 
 	for(var i = 0; i < appItems.length; i++) {
-		Mojo.Log.error("setup option toggle: " + appItems[i].data);
 		this.SetupOptionToggles(appItems[i].data, appItems[i].definition)
 	}
 	this.controller.get("appOptionList").style.visibility = "visible";
 }
 
+MainAssistant.prototype.relaunchApp = function() {
+	systemModel.SetSystemAlarmRelative("00:00:02", gblLaunchParams);
+	var appController = Mojo.Controller.getAppController();
+	appController.closeAllStages();
+};
+
 var appsToCheck = 0;
+var appCheckTimeout = false;
 MainAssistant.prototype.getAppInstalledList = function()
 {
 	var perAppSettings = appModel.AppSettingsCurrent["perAppSettings"];
@@ -466,6 +511,8 @@ MainAssistant.prototype.getAppInstalledList = function()
 			systemModel.checkFileExists("/media/cryptofs/apps/usr/palm/applications/" + key, this.appInstalledListCallback.bind(this));
 		}
 	}
+	//Give this check a maximum of 4 seconds to complete. This way we're still function if FileMgr doesn't exist/respond
+	appCheckTimeout = setTimeout(this.updateInstalledAppsOptions.bind(this), 4000);
 }
 
 var appsChecked = 0;
@@ -480,17 +527,17 @@ MainAssistant.prototype.appInstalledListCallback = function(response, request)
 		if (response.exists && response.exists)
 		{
 			perAppSettings[whichApp].installed = "1";
-			Mojo.Log.info("Set installed to true for: " + whichApp);
 		}
 		else
 		{
 			perAppSettings[whichApp].installed = "0";
-			Mojo.Log.info("Set installed to false for: " + whichApp);
 		}
 	}
 	if (appsChecked >= appsToCheck)
 	{
-		Mojo.Log.info("All apps checked, now update the app options list!")
+		this.logInfo("All apps checked, ready to update the options list", "info");
+		clearTimeout(appCheckTimeout);
+		appCheckTimeout = false;
 		this.updateInstalledAppsOptions();
 	}
 }

@@ -122,7 +122,6 @@ PebbleModel.prototype.CreatePebblePhoneinfo = function(caller, number) {
 	for (var i=0; i<result.length; i++) {
 		debug += result[i].toString(16) + " ";
 	}
-	//this.logInfo(debug);
 
 	this.lastMusicPhoneWrite = (new Date()).getTime();
 	return result;
@@ -232,7 +231,6 @@ PebbleModel.prototype.CreatePebbleNotification30 = function(from, info, appid) {
 		attributes_count++;
 		attributes_length += (3 + info.length);
 	}
-	Mojo.Log.error("*** HERE ***");
 	icon_id = appIds[appid].icon;
 
 	var pin_length = NOTIFICATION_PIN_LENGTH + attributes_length;
@@ -316,13 +314,6 @@ PebbleModel.prototype.CreatePebbleNotification30 = function(from, info, appid) {
 		result.push(pin[i]);
 	}
 	result.push(0x00, 0x00, 0x00, 0x00);
-/*
-	var debug = "";
-	for (var i=0; i<result.length; i++) {
-		debug += result[i].toString(16) + " ";
-	}
-	this.logInfo(debug);
-*/
 	return result;
 };
 

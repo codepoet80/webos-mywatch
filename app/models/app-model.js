@@ -21,8 +21,10 @@ var AppModel = function()
 		watchType: "Pebble",
 		timeoutValue: 0,
 		lostConnectionValue: 0,
-		showLogging: false,
 		lastInstanceId: 25,
+		debugPersistDash: false,
+		debugVerbose: false,
+		debugLargerFont: false,
 		sppState: "notyetconnected",
 		inactiveAllNotifications: 0,
 		inactiveOtherNotifications: 0,
@@ -116,14 +118,14 @@ AppModel.prototype.SaveSettings = function ()
 	settingsCookie.put(appModel.AppSettingsCurrent);
 }
 
-AppModel.prototype.ResetSettings = function()
+AppModel.prototype.ResetSettings = function(relaunch)
 {
 	//Tell main scene to drop settings
 	this.AppSettingsCurrent = this.AppSettingsDefaults;
 	this.SaveSettings();
 	Mojo.Log.info("reset settings");
 	
-	if (this.DefaultScene)
+	if (this.DefaultScene && relaunch != false)
 	{
 		var stageController = Mojo.Controller.getAppController().getActiveStageController("card");
 		stageController.popScene(this.DefaultScene);

@@ -14,12 +14,10 @@ var gblTimeOutHdl = 0;
 var timeoutValue = 0;
 var lostConnectionValue = 0;
 var closeWindowTimeout = false;
-var radioOff = false;
 var timeoutMusicPhoneValue = 5 * 60; // hardcoded: 5 min timeout for phone and music messages
 var lastMusicAppId = "com.palm.app.musicplayer";
 
 function AppAssistant (appController) {
-	Mojo.Log.error("Creating app assistant");
 	this.appController = appController;
 	appModel = new AppModel();
 	appModel.LoadSettings();
@@ -49,7 +47,6 @@ function AppAssistant (appController) {
 
 var closeWindowTimeout = false;
 AppAssistant.prototype.handleLaunch = function(launchParams) {
-	Mojo.Log.error("***** launch called with: " + JSON.stringify(launchParams) + " ******");
 	clearTimeout(closeWindowTimeout);
 	closeWindowTimeout = false;
 	myAppId = Mojo.Controller.appInfo.id;
@@ -57,18 +54,18 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 	if (launchParams.retryCount)
 		sendAttempts = launchParams.retryCount;
 
-	this.logInfo('Params: ' + Object.toJSON(launchParams));
-	this.logInfo('Options: ' + Object.toJSON(appModel.AppSettingsCurrent));
+	this.logInfo('Launch Params: ' + Object.toJSON(launchParams), "info");
+	this.logInfo('Options at Launch: ' + Object.toJSON(appModel.AppSettingsCurrent), "info");
 
 	var dashboardProxy = this.controller.getStageProxy(DashboardName);
 	if (dashboardProxy) {
-		this.logInfo('App Dashboard launch, dashboard already exists.');
+		this.logInfo('App Dashboard launch, dashboard already exists.', "warn");
 		dashboardFound = true;
 		gblRelaunched = true;
 		var dashboardStage = this.appController.getStageController(DashboardName);
 		dashboardStage.delegateToSceneAssistant("displayDashboard", launchParams.dashInfo);
 	} else {
-		this.logInfo('Creating App Dashboard stage.');
+		this.logInfo('Creating App Dashboard stage.', "warn");
 		var pushDashboard = function (stageController) {
 			stageController.pushScene(DashboardName, launchParams.dashInfo);
 		};
@@ -79,7 +76,7 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 	var stageProxy = this.controller.getStageProxy(MainStageName);
 	var stageController = this.controller.getStageController(MainStageName);
 	if (stageProxy) {
-		this.logInfo('App launching existing main scene.');
+		this.logInfo('App launching existing main scene.', "warn");
 		gblRelaunched = true;
 		// If the stage exists, just bring it to the front by focusing its window.
 		// Or, if it is just the proxy, then it is being focused, so exit.
@@ -91,12 +88,13 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 		if (!(gblLaunchParams.dockMode || gblLaunchParams.touchstoneMode)) {
 			stageProxy.delegateToSceneAssistant("handleLaunchParams");
 		}
+		this.showInfo("Awaiting connection", false);
 		return;
 	} else {
 		var useScene = MainStageName;
 		if (launchParams && (typeof(launchParams) == 'object'))
 		{
-			this.logInfo('App launching with loading scene.');
+			this.logInfo('App launching with loading scene.', "warn");
 			useScene = LoadingStageName;
 		}
 		var pushMainScene = function(stageController) {
@@ -104,6 +102,7 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 		};
 		var stageArguments = {name: useScene, lightweight: true};
 		this.controller.createStageWithCallback(stageArguments, pushMainScene, (gblLaunchParams.dockMode || gblLaunchParams.touchstoneMode) ? "dockMode" : "card");	
+		this.showInfo("Awaiting connection");
 		this.doEventLaunch(launchParams);
 		return;
 	}
@@ -111,45 +110,52 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 
 AppAssistant.prototype.abortIfRadioOff = function()
 {
-	radioOff = true;
-	this.logInfo("Bluetooth radio reports off, not attempting to send message to watch.")
-	var logText = "Bluetooth off: My Watch can't send."
-	this.showInfo(logText);
-	if (launchParams && (typeof(launchParams) == 'object')) {
-		Mojo.Controller.getAppController().showBanner({messageText: logText, icon: 'icon24.png'}, "", "");
+	clearTimeout(getDeviceTimeout);
+	var logText = "No Bluetooth connection: My Watch can't send.";
+	this.showInfo(logText, false);
+	clearTimeout(sendRetryTimeout);
+	this.cleanup();
+	if (!launchParams || (typeof(launchParams) != 'object')) {
 		this.closeAfterNotification();
 	}
 }
 
+var getDeviceTimeout = false;
 AppAssistant.prototype.doEventLaunch = function(launchParams)
 {
-	// Check if the radio is off -- in which case, we abort
-	bluetoothModel.getRadioState(null, null, null, this.abortIfRadioOff.bind(this));
-
 	// Register for SPP Notifications	
 	if (!this.sppNotificationService) {
 		if (watchType == "MW150") {
 			this.subscribe();
 		} else if (watchType == "Pebble") {
-			// bluetooth
-			this.logInfo("Getting trusted devices " + this.urlgap);
+			this.showInfo("Getting trusted devices " + this.urlgap, "error", false);
+			//Try for a long time, then abort. We'll get re-try opportunities later.		
+			getDeviceTimeout = setTimeout(this.abortIfRadioOff.bind(this), 55000);
+			//Launches with parameters will use a different retry strategy (see: sendLaunchMessageToWatch)
 			new Mojo.Service.Request(this.urlgap, {
 				method: 'gettrusteddevices',
 				parameters: {},
 				onSuccess: function (e) {
-					this.logInfo("Successful trusted devices query: " + JSON.stringify(e));
+					this.logInfo("Successful trusted devices query: " + JSON.stringify(e), "info");
 					for (var i=0; i<e.trusteddevices.length; i++) {
 						if (e.trusteddevices[i].name.search(/Pebble/i) > -1) {
-							this.logInfo("Connecting to trusted device: " + e.trusteddevices[i].name);
+							this.showInfo("Connecting to trusted device: " + e.trusteddevices[i].name, false);
 							this.targetAddress = e.trusteddevices[i].address;
 							bluetoothModel.connect(watchType, this.targetAddress, this.subscribe());
 							break;
 						}
 						else
-						this.logInfo("Can't find a pebble", "error");
+						{						
+							this.showInfo("No Pebble devices could be found!", false);
+							this.abortIfRadioOff();
+						}
+
 					}
 				}.bind(this),
-				onFailure: function (e) {Mojo.Log.error("Failure to query trusted devices: "+JSON.stringify(e));}.bind(this)
+				onFailure: function (e) {
+					this.logInfo("Failure to query trusted devices: " + JSON.stringify(e), "error");
+					this.abortIfRadioOff();
+				}.bind(this)
 			});
 			
 		} else if (watchType == "LiveView") {
@@ -160,6 +166,7 @@ AppAssistant.prototype.doEventLaunch = function(launchParams)
 }
 
 AppAssistant.prototype.subscribe = function() {
+	clearTimeout(getDeviceTimeout);
 	if (this.sppNotificationService == null)
 	{
 		this.showInfo("Subscribing to Bluetooth notifications.");
@@ -184,7 +191,7 @@ AppAssistant.prototype.subscribe = function() {
 //Notification handler for SPP events.
 AppAssistant.prototype.sppNotify = function(objData)
 {
-	this.logInfo("SPP Notification for " + watchType + " " + Object.toJSON(objData));
+	this.logInfo("SPP Notification for " + watchType + " " + Object.toJSON(objData), "info");
 	this.lastNotify = (new Date()).getTime();
 	if (!objData.notification) {
 		if ((watchType == "MW150") || (watchType == "LiveView")) {
@@ -203,7 +210,7 @@ AppAssistant.prototype.sppNotify = function(objData)
 	switch(objData.notification)
 	{
 		case "notifnserverenabled":
-			this.logInfo(objData.notification + ((objData.error != 0) ? (" Error = " + objData.error) : ""));
+			this.logInfo(objData.notification + ((objData.error != 0) ? (" Error = " + objData.error) : ""), "error");
 			if (objData.error == 0) {
 				this.showInfo("Ready for connection.");
 			} else {
@@ -212,14 +219,14 @@ AppAssistant.prototype.sppNotify = function(objData)
 			break;
 
 		case "notifnserverdisabled":
-			this.logInfo(objData.notification + " Error = " + objData.error);
+			this.logInfo(objData.notification + " Error = " + objData.error, "error");
 			this.showInfo("Error: notification server disabled");
 			this.ServerEnabled = false;
 			//this.enableserver(true);
 			break;
 
 		case "notifnconnected":
-			this.logInfo(objData.notification + " InstanceId = " + objData.instanceId + ((objData.error != 0) ? (" Error = " + objData.error) : ""));
+			this.logInfo(objData.notification + " InstanceId = " + objData.instanceId + ((objData.error != 0) ? (" Error = " + objData.error) : ""), "error");
 			if (objData.error != 0) {
 				this.showInfo("Error " + objData.error + " with notification connection to " + watchType);
 				this.logInfo(JSON.stringify(objData), "error");
@@ -257,7 +264,7 @@ AppAssistant.prototype.sppNotify = function(objData)
 			break;
 
 		default:
-			this.logInfo(objData.notification + " " + Object.toJSON(objData));
+			this.logInfo(objData.notification + " " + Object.toJSON(objData), "error");
 			break;
 	}
 };
@@ -275,11 +282,11 @@ AppAssistant.prototype.sendLaunchMessageToWatch = function()
 	launchParams = gblLaunchParams;
 	clearTimeout(sendRetryTimeout);
 	sendRetryTimeout = false;
-	if (launchParams && (typeof(launchParams) == 'object') && !radioOff) {
-		this.logInfo("We have a message to send to the watch, checking for connection.");
+	if (launchParams && (typeof(launchParams) == 'object')) {
+		this.logInfo("We have a message to send to the watch, checking for connection.", "warn");
 		if (this.getOpen())
 		{
-			this.logInfo("SPP connection reports ready. Sending message to watch.");
+			this.logInfo("SPP connection reports ready. Sending message to watch.", "warn");
 			if (launchParams.command == "SMS") {
 				if (appModel.AppSettingsCurrent.perAppSettings["com.palm.app.messaging"].inactive == 0)
 				{
@@ -331,34 +338,34 @@ AppAssistant.prototype.sendLaunchMessageToWatch = function()
 		{
 			sendAttempts++;
 			sppState = appModel.AppSettingsCurrent["sppState"];
-			this.logInfo("SPP not ready for messages. State is: " + sppState + ".");
+			this.logInfo("SPP not ready for messages. State is: " + sppState + ".", "error");
 			if (sendAttempts == 5 || sendAttempts == 15 || sendAttempts == 25 || sendAttempts == 50 || sendAttempts == 70)
 			{
 				if (sppState == "notifndisconnected" || sppState == "notifnconnected")
 				{
-					this.logInfo("Trying to restart sending procedure.");
+					this.logInfo("Trying to restart sending procedure.", "error");
 					appModel.AppSettingsCurrent["sppState"] = "notyetconnected";
-					setTimeout(this.relaunchApp.bind(this), 3000);
+					setTimeout(this.relaunchApp.bind(this), 2000);
 					return;
 				}
 			}
 			else if (sendAttempts >= 75)
 			{
-				this.logInfo("Nothing left to try. Unable to send message.");
+				this.logInfo("Nothing left to try. Unable to send message.", "error");
 				sendAttempts = 0;
 				this.cleanup();
 				this.checkMessageSentToWatch();
 			}
 			else
 			{
-				this.logInfo("Waiting to re-try (" + sendAttempts + ").")
+				this.logInfo("Waiting to re-try (" + sendAttempts + ").", "warn")
 				sendRetryTimeout = setTimeout(this.sendLaunchMessageToWatch.bind(this), 3000);
 			}
 		}
 	}
 	else
 	{
-		this.logInfo("No message found to send to watch.");
+		this.logInfo("No message found to send to watch.", "info");
 	}
 	
 }
@@ -369,37 +376,44 @@ AppAssistant.prototype.checkMessageSentToWatch = function()
 {
 	clearTimeout(checkMessageSentTimeout);
 	checkMessageSentTimeout = false;
-	this.logInfo("Checking to see if last message sent successfully. Open is: " + this.getOpen() + ", last status is: " + bluetoothModel.getLastCommStatus());
+	this.logInfo("Checking to see if last message sent successfully. Open is: " + this.getOpen() + ", last status is: " + bluetoothModel.getLastCommStatus(), "error");
 	if (this.getOpen() && bluetoothModel.getLastCommStatus())
 	{
-		this.showInfo(gblLaunchParams.command + " message sent to " + watchType, logger);
+		this.showInfo(gblLaunchParams.command + " message sent to " + watchType);
 		var stageProxy = this.controller.getStageProxy(MainStageName);
 		if (!stageProxy)
 		{
-			this.logInfo("Main window not found. Shutting down after successful notification in 8 seconds.");
-			closeWindowTimeout = setTimeout(this.closeAfterNotification.bind(this), 8000);
+			this.logInfo("Main window not found. Shutting down after successful notification in 5 seconds.", "warn");
+			closeWindowTimeout = setTimeout(this.closeAfterNotification.bind(this), 5000);
 		}
 		else
-			this.logInfo("Main window was found. NOT shutting down after successful notification.");
+			this.logInfo("Main window was found. NOT shutting down after successful notification.", "warn");
 	}
 	else
 	{
-		this.logInfo("NOT shutting down after failed notificiation.");
-		this.cleanup();
-		this.showInfo(gblLaunchParams.command + " message to " + watchType + " failed", logger);
+		this.logInfo("A connection could not be established to send a message after multiple attempts. Shutting down in 1 minute.", "error");
+		this.showInfo(gblLaunchParams.command + " message to " + watchType + " failed", false);
+		closeWindowTimeout = setTimeout(this.closeAfterNotification.bind(this), 60000);
 	}
 }
 
 AppAssistant.prototype.closeAfterNotification = function()
 {
-	//TODO: If the main scene doesn't exist, close the dashboard
-	var stageProxy = this.controller.getStageProxy(MainStageName);
-	if (!stageProxy)
+	if (!appModel.AppSettingsCurrent["debugPersistDash"])
 	{
-		closeWindowTimeout = false;
-		clearTimeout(closeWindowTimeout);
-		var appController = Mojo.Controller.getAppController();
-		appController.closeAllStages();
+		var stageProxy = this.controller.getStageProxy(MainStageName);
+		if (!stageProxy)
+		{
+			closeWindowTimeout = false;
+			clearTimeout(closeWindowTimeout);
+			var appController = Mojo.Controller.getAppController();
+			appController.closeAllStages();
+		}
+	}
+	else
+	{
+		//Keep the dashboard opening, since the preferences said we have to
+		this.logInfo("Debugging is on, not closing Dashboard.", "warn");
 	}
 }
 
@@ -418,35 +432,35 @@ AppAssistant.prototype.enableserver = function(enable) {
 	if (enable) {
 		if (!this.ServerEnabled && !this.InEnableServer) {
 			this.InEnableServer = true;
-			this.logInfo("enabling server " + this.InEnableServer);
+			this.logInfo("Enabling SPP server " + this.InEnableServer, "warn");
 			new Mojo.Service.Request(this.urlspp, {
 				method: 'enableserver',
 				parameters: {"servicename": "SPP slave"},
 				onSuccess: function (e) {
 					this.InEnableServer = false;
 					this.ServerEnabled = true;
-					this.logInfo("Enableserver success");
+					this.logInfo("Enableserver success", "warn");
 				}.bind(this),
 				onFailure: function (e) {
 					this.InEnableServer = false;
 					this.ServerEnabled = false;
-					this.logInfo("Enableserver failure " + Object.toJSON(e));
+					this.logInfo("Enableserver failure " + Object.toJSON(e), "error");
 				}.bind(this)
 			});
 		}
 	} else {
 		if (this.ServerEnabled) {
-			this.logInfo("disabling server");
+			this.logInfo("Disabling SPP server", "warn");
 			new Mojo.Service.Request(this.urlspp, {
 				method: 'disableserver',
 				parameters: {"servicename": "SPP slave"},
 				onSuccess: function (e) {
 					this.ServerEnabled = false;
-					this.logInfo("Disableserver success");
+					this.logInfo("Disableserver success", "warn");
 				}.bind(this),
 				onFailure: function (e) {
 					this.ServerEnabled = true;
-					this.logInfo("Disableserver failure " + Object.toJSON(e));
+					this.logInfo("Disableserver failure " + Object.toJSON(e), "error");
 				}.bind(this)
 			});
 		}
@@ -467,44 +481,42 @@ AppAssistant.prototype.EvalPixel = function(inputData, index, value, THRESHOLD) 
 	return 0;
 };
 
-var lastLoggingConnectionStatus = false;
-AppAssistant.prototype.logInfo = function(logText, level) {
-	if (level == "info")
-		Mojo.Log.info(logText);
-	else if (level == "warn")
-		Mojo.Log.info(logText);
-	else
-		Mojo.Log.error(logText);
-
-	lastLoggingConnectionStatus = bluetoothModel.getOpen()
-	//Update UI loggers, if present
-	var stageProxy = Mojo.Controller.getAppController().getStageProxy(MainStageName);
-	if (stageProxy) {
-		stageProxy.delegateToSceneAssistant("logInfo", logText, lastLoggingConnectionStatus, level);
-	}
+//Show Info send logs to log info at Error level, and show the message in a banner/dashboard and updates the connection state. It also works if the Dashboard is not open.
+AppAssistant.prototype.showInfo = function(logText, forceState) {
+	var useState = bluetoothModel.getOpen()
+	if (forceState)
+		useState = forceState;
 	var stageProxy = Mojo.Controller.getAppController().getStageProxy(DashboardName);
 	if (stageProxy) {
-		stageProxy.delegateToSceneAssistant("logInfo", logText, lastLoggingConnectionStatus, level);
-	}
-};
-
-AppAssistant.prototype.sendLog = function() {
-	//Removed a section that seemed to send text messages to someone in Texas
-	return;
-};
-
-AppAssistant.prototype.showInfo = function(logText, logger) {
-	var stageProxy = Mojo.Controller.getAppController().getStageProxy(DashboardName);
-	if (stageProxy) {
-		stageProxy.delegateToSceneAssistant("showInfo", logText, bluetoothModel.getOpen());
+		stageProxy.delegateToSceneAssistant("showInfo", logText, useState);
 	}
 	else
 		Mojo.Controller.getAppController().showBanner({messageText: logText, icon: 'icon24.png'}, "", "");
 	
-	if (logger)
-		logger(logText);
-	else
+	if (this.logInfo)	//If this function is called from another context, the function will have a different name
 		this.logInfo(logText, "error");
+	else
+		Mojo.Log.error("*** logInfo could not be found: " + logText);
+};
+
+var lastLoggingConnectionStatus = false;
+AppAssistant.prototype.logInfo = function(logText, level, forceState) {
+	lastLoggingConnectionStatus = bluetoothModel.getOpen();
+	if (forceState)
+		lastLoggingConnectionStatus = forceState;
+	//Send the log message to the main scene, if its present
+	var stageProxy = Mojo.Controller.getAppController().getStageProxy(MainStageName);
+	if (stageProxy) {
+		stageProxy.delegateToSceneAssistant("logInfo", logText, level, lastLoggingConnectionStatus);
+	}
+	else {
+		if (level == "error" || appModel.AppSettingsCurrent["debugVerbose"] == true)
+			Mojo.Log.error(logText);
+		else if (level == "warn")
+			Mojo.Log.warn(logText);
+		else
+			Mojo.Log.info(logText);
+	}
 };
 
 AppAssistant.prototype.cleanup = function(event) {
@@ -519,7 +531,7 @@ AppAssistant.prototype.cleanup = function(event) {
 	this.sppNotificationService = null
 	bluetoothModel.close(watchType, this.instanceId, this.targetAddress);
 
-	Mojo.Log.error ("Cleaned up Bluetooth connections");
+	this.logInfo("Cleaned up Bluetooth connections", "warn");
 };
 
 String.prototype.hashCode = function(){

@@ -136,7 +136,7 @@ AppAssistant.prototype.doEventLaunch = function(launchParams)
 				method: 'gettrusteddevices',
 				parameters: {},
 				onSuccess: function (e) {
-					this.logInfo("Successful trusted devices query: " + JSON.stringify(e), "info");
+					this.logInfo("Successful trusted devices query: " + JSON.stringify(e), "info", false);
 					for (var i=0; i<e.trusteddevices.length; i++) {
 						if (e.trusteddevices[i].name.search(/Pebble/i) > -1) {
 							this.showInfo("Connecting to trusted device: " + e.trusteddevices[i].name, false);
@@ -175,7 +175,7 @@ AppAssistant.prototype.subscribe = function() {
 			parameters: {"subscribe": true},
 			onSuccess: this.sppNotify.bind(this),
 			onFailure: function (e) {
-				this.showInfo("Failed to subscribe to Bluetooth notifications!");
+				this.showInfo("Failed to subscribe to Bluetooth notifications!", false);
 				this.sppNotificationService.cancel();
 				this.sppNotificationService = null;
 			}.bind(this)

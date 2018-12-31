@@ -18,4 +18,4 @@ https://forums.webosnation.com/webos-homebrew-apps/331159-connecting-pebble-webo
 - 1.0.2 - App preferences are populated dynamically from a single source. Eventually this could come from a file. Improvements to .patch file.
 - 1.0.3 - App preferences are now filtered by whether or not the supported app is installed. Building with same ID as mWatch for compatibility.
 - 1.0.4 - Don't grab focus if already running and a notification comes in.
-- 1.0.5 - Add Troubleshooting features for developers
+- 1.0.5 - Add Troubleshooting features for developers.

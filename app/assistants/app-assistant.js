@@ -111,13 +111,8 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 AppAssistant.prototype.abortIfRadioOff = function()
 {
 	clearTimeout(getDeviceTimeout);
-	var logText = "No Bluetooth connection: My Watch can't send.";
-	this.showInfo(logText, false);
+	this.showInfo("No Bluetooth connection could be established.", false);
 	clearTimeout(sendRetryTimeout);
-	this.cleanup();
-	if (!launchParams || (typeof(launchParams) != 'object')) {
-		this.closeAfterNotification();
-	}
 }
 
 var getDeviceTimeout = false;
@@ -130,7 +125,7 @@ AppAssistant.prototype.doEventLaunch = function(launchParams)
 		} else if (watchType == "Pebble") {
 			this.showInfo("Getting trusted devices " + this.urlgap, "error", false);
 			//Try for a long time, then abort. We'll get re-try opportunities later.		
-			getDeviceTimeout = setTimeout(this.abortIfRadioOff.bind(this), 55000);
+			getDeviceTimeout = setTimeout(this.abortIfRadioOff.bind(this), 90000);
 			//Launches with parameters will use a different retry strategy (see: sendLaunchMessageToWatch)
 			new Mojo.Service.Request(this.urlgap, {
 				method: 'gettrusteddevices',

@@ -113,6 +113,8 @@ AppAssistant.prototype.abortIfRadioOff = function()
 	clearTimeout(getDeviceTimeout);
 	this.showInfo("No Bluetooth connection could be established.", false);
 	clearTimeout(sendRetryTimeout);
+	closeAfterNotification();
+
 }
 
 var getDeviceTimeout = false;
@@ -125,26 +127,27 @@ AppAssistant.prototype.doEventLaunch = function(launchParams)
 		} else if (watchType == "Pebble") {
 			this.showInfo("Getting trusted devices " + this.urlgap, "error", false);
 			//Try for a long time, then abort. We'll get re-try opportunities later.		
-			getDeviceTimeout = setTimeout(this.abortIfRadioOff.bind(this), 90000);
+			getDeviceTimeout = setTimeout(this.abortIfRadioOff.bind(this), 45000);
 			//Launches with parameters will use a different retry strategy (see: sendLaunchMessageToWatch)
 			new Mojo.Service.Request(this.urlgap, {
 				method: 'gettrusteddevices',
 				parameters: {},
 				onSuccess: function (e) {
 					this.logInfo("Successful trusted devices query: " + JSON.stringify(e), "info", false);
+					var pebbleFound = false;
 					for (var i=0; i<e.trusteddevices.length; i++) {
 						if (e.trusteddevices[i].name.search(/Pebble/i) > -1) {
+							pebbleFound = true;
 							this.showInfo("Connecting to trusted device: " + e.trusteddevices[i].name, false);
 							this.targetAddress = e.trusteddevices[i].address;
 							bluetoothModel.connect(watchType, this.targetAddress, this.subscribe());
 							break;
 						}
-						else
-						{						
-							this.showInfo("No Pebble devices could be found!", false);
-							this.abortIfRadioOff();
-						}
-
+					}
+					if (!pebbleFound)
+					{						
+						this.showInfo("No Pebble devices could be found!", false);
+						this.abortIfRadioOff();
 					}
 				}.bind(this),
 				onFailure: function (e) {

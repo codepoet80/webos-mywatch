@@ -535,7 +535,7 @@ AppAssistant.prototype.cleanup = function(event) {
 	this.sppNotificationService = null
 	bluetoothModel.close(watchType, this.instanceId, this.targetAddress);
 
-	this.logInfo("Cleaned up Bluetooth connections", "warn");
+	this.logInfo("All these Bluetooth connections closed, like tears in rain. Time to die.", "warn");
 };
 
 String.prototype.hashCode = function(){

@@ -113,8 +113,7 @@ AppAssistant.prototype.abortIfRadioOff = function()
 	clearTimeout(getDeviceTimeout);
 	this.showInfo("No Bluetooth connection could be established.", false);
 	clearTimeout(sendRetryTimeout);
-	closeAfterNotification();
-
+	this.closeAfterNotification();
 }
 
 var getDeviceTimeout = false;
@@ -147,6 +146,7 @@ AppAssistant.prototype.doEventLaunch = function(launchParams)
 					if (!pebbleFound)
 					{						
 						this.showInfo("No Pebble devices could be found!", false);
+						this.logInfo("My Watch is shutting down because it couldn't find a Pebble to notify even though Pebble watch type was selected.", "error");
 						this.abortIfRadioOff();
 					}
 				}.bind(this),
@@ -176,6 +176,7 @@ AppAssistant.prototype.subscribe = function() {
 				this.showInfo("Failed to subscribe to Bluetooth notifications!", false);
 				this.sppNotificationService.cancel();
 				this.sppNotificationService = null;
+				closeWindowTimeout = setTimeout(this.closeAfterNotification.bind(this), 60000);
 			}.bind(this)
 		};
 		this.sppNotificationService = new Mojo.Service.Request(this.urlspp, msg);
@@ -271,6 +272,7 @@ var sendAttempts = 0;
 var sendRetryTimeout = false;
 AppAssistant.prototype.sendLaunchMessageToWatch = function()
 {
+	this.showInfo("Attempting to send message to watch.", "info");
 	//Check if this app is allowed to send a message, per the preferences
 	if (appModel.AppSettingsCurrent["inactiveAllNotifications"] > 0)
 	{
@@ -353,6 +355,8 @@ AppAssistant.prototype.sendLaunchMessageToWatch = function()
 				sendAttempts = 0;
 				this.cleanup();
 				this.checkMessageSentToWatch();
+				closeWindowTimeout = setTimeout(this.closeAfterNotification.bind(this), 60000);
+				return;
 			}
 			else
 			{
@@ -363,7 +367,9 @@ AppAssistant.prototype.sendLaunchMessageToWatch = function()
 	}
 	else
 	{
-		this.logInfo("No message found to send to watch.", "info");
+		this.logInfo("No message found to send to watch.", "error");
+		closeWindowTimeout = setTimeout(this.closeAfterNotification.bind(this), 60000);
+		return;
 	}
 	
 }

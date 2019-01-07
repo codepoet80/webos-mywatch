@@ -108,25 +108,27 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
 	}
 };
 
-AppAssistant.prototype.abortIfRadioOff = function()
+/*AppAssistant.prototype.abortIfRadioOff = function()
 {
 	clearTimeout(getDeviceTimeout);
+	clearTimeout(sendRetryTimeout);
 	this.showInfo("No Bluetooth connection could be established.", false);
 	clearTimeout(sendRetryTimeout);
 	this.closeAfterNotification();
-}
+}*/
 
 var getDeviceTimeout = false;
 AppAssistant.prototype.doEventLaunch = function(launchParams)
 {
+	//Try for a long time, then close.	
+	getDeviceTimeout = setTimeout(this.closeAfterNotification.bind(this), 45000);
+
 	// Register for SPP Notifications	
 	if (!this.sppNotificationService) {
 		if (watchType == "MW150") {
 			this.subscribe();
 		} else if (watchType == "Pebble") {
 			this.showInfo("Getting trusted devices " + this.urlgap, "error", false);
-			//Try for a long time, then abort. We'll get re-try opportunities later.		
-			getDeviceTimeout = setTimeout(this.abortIfRadioOff.bind(this), 45000);
 			//Launches with parameters will use a different retry strategy (see: sendLaunchMessageToWatch)
 			new Mojo.Service.Request(this.urlgap, {
 				method: 'gettrusteddevices',
@@ -146,13 +148,13 @@ AppAssistant.prototype.doEventLaunch = function(launchParams)
 					if (!pebbleFound)
 					{						
 						this.showInfo("No Pebble devices could be found!", false);
-						this.logInfo("My Watch is shutting down because it couldn't find a Pebble to notify even though Pebble watch type was selected.", "error");
-						this.abortIfRadioOff();
+						//this.logInfo("My Watch is shutting down because it couldn't find a Pebble to notify even though Pebble watch type was selected.", "error");
+						//this.abortIfRadioOff();
 					}
 				}.bind(this),
 				onFailure: function (e) {
 					this.logInfo("Failure to query trusted devices: " + JSON.stringify(e), "error");
-					this.abortIfRadioOff();
+					//this.abortIfRadioOff();
 				}.bind(this)
 			});
 			
@@ -272,7 +274,7 @@ var sendAttempts = 0;
 var sendRetryTimeout = false;
 AppAssistant.prototype.sendLaunchMessageToWatch = function()
 {
-	this.showInfo("Attempting to send message to watch.", "info");
+	this.logInfo("Attempting to send message to watch.", "info");
 	//Check if this app is allowed to send a message, per the preferences
 	if (appModel.AppSettingsCurrent["inactiveAllNotifications"] > 0)
 	{
@@ -403,13 +405,15 @@ AppAssistant.prototype.checkMessageSentToWatch = function()
 
 AppAssistant.prototype.closeAfterNotification = function()
 {
+	clearTimeout(getDeviceTimeout);
+	clearTimeout(sendRetryTimeout);
+	clearTimeout(closeWindowTimeout);
 	if (!appModel.AppSettingsCurrent["debugPersistDash"])
 	{
 		var stageProxy = this.controller.getStageProxy(MainStageName);
 		if (!stageProxy)
 		{
 			closeWindowTimeout = false;
-			clearTimeout(closeWindowTimeout);
 			var appController = Mojo.Controller.getAppController();
 			appController.closeAllStages();
 		}
